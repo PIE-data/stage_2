@@ -1,5 +1,15 @@
 # Same line endings on Windows, WSL and CI: scripts break with CRLF.
 * text=auto eol=lf
+
+# Stage 1 reference files must stay byte-identical on every machine (some golden books
+# contain CRLF): never normalise them. Same rules as in the stage_1 repository.
+spec/golden/** -text
+spec/corpus/** -text
+spec/stopwords_en.txt -text
+spec/language_map.txt -text
+spec/queries/** -text
+
+*.gz binary
 *.jar binary
 *.png binary
 *.pdf binary

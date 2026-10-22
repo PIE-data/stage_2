@@ -3,14 +3,21 @@
 Service-oriented version of the Stage 1 data layer: independent Java services that cooperate
 through an ActiveMQ message broker and REST APIs, all running on one machine.
 
-> Status: **project skeleton** (issue #1). Every service starts and answers `GET /status`;
-> the real endpoints are added in issues #2–#5.
+> Status: **foundation done** (issue #1): skeleton, contracts, Java tokenizer, JMH setup.
+> Every service starts and answers `GET /status`; the real endpoints are added in issues #2–#5.
 
 ## Design documents
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — components, diagram, life of a book, replicas and threads
 - [docs/DATAMART.md](docs/DATAMART.md) — SQLite schema shared by Indexing (writer) and Search (reader)
 - [docs/EVENTS.md](docs/EVENTS.md) — broker queues, message formats, acknowledgements and retries
+
+## Stage 1 reference files
+
+`spec/` holds the frozen Stage 1 inputs and oracles (stop words, language map, golden books,
+expected hashes, corpus manifests, query sets). See [spec/README.md](spec/README.md).
+The Java tokenizer (`common`, `es.ulpgc.piedata.common.text.Tokenizer`) is verified against
+`spec/golden/tokens_20.jsonl` by `GoldenTokensTest`.
 
 ## Requirements
 
@@ -42,6 +49,22 @@ Each runnable module produces one self-contained jar: `<module>/target/<module>.
 java -jar search-service/target/search-service.jar
 curl http://localhost:7003/status
 ```
+
+## Microbenchmarks (JMH)
+
+Benchmark classes live in each module under `src/test/java/.../benchmark` (example:
+`common/.../benchmark/TokenizerBenchmark.java`). Settings shared by every module are in the
+parent `pom.xml` (`jmh.*` properties): 5 warm-up and 10 measurement iterations, 1 fork,
+1 thread, fixed heap 4 GB, CSV output.
+
+```bash
+mvn -q install -DskipTests                       # once, so modules can find common
+mvn -pl common test-compile exec:exec            # all benchmarks of a module
+mvn -pl common test-compile exec:exec -Djmh.include=TokenizerBenchmark -Djmh.threads=4
+```
+
+Results are written to `results/jmh/<module>.csv`. Run benchmarks on an idle machine and
+record its specification together with the results.
 
 ## Configuration
 
