@@ -6,6 +6,12 @@ through an ActiveMQ message broker and REST APIs, all running on one machine.
 > Status: **project skeleton** (issue #1). Every service starts and answers `GET /status`;
 > the real endpoints are added in issues #2–#5.
 
+## Design documents
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — components, diagram, life of a book, replicas and threads
+- [docs/DATAMART.md](docs/DATAMART.md) — SQLite schema shared by Indexing (writer) and Search (reader)
+- [docs/EVENTS.md](docs/EVENTS.md) — broker queues, message formats, acknowledgements and retries
+
 ## Requirements
 
 - Java 17 or newer (the code is compiled for Java 17)
@@ -61,6 +67,7 @@ Common keys:
 | `server.threads.min` / `server.threads.max` | Jetty request threads of this process |
 | `data.dir` | Workspace root (datalake, datamarts) |
 | `broker.url` | ActiveMQ address |
+| `consumer.threads` | Message consumer sessions per process (ingestion, indexing) |
 
 ## Conventions for every service
 
