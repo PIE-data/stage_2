@@ -1,2 +1,75 @@
-# stage_2
-Stage 2 of Big Data Project
+# PIE-data search engine — Stage 2
+
+Service-oriented version of the Stage 1 data layer: independent Java services that cooperate
+through an ActiveMQ message broker and REST APIs, all running on one machine.
+
+> Status: **project skeleton** (issue #1). Every service starts and answers `GET /status`;
+> the real endpoints are added in issues #2–#5.
+
+## Requirements
+
+- Java 17 or newer (the code is compiled for Java 17)
+- Maven 3.9 or newer
+
+## Modules
+
+| Module | What it is | Default port | Issue |
+|---|---|---|---|
+| `common` | Shared code: configuration, HTTP server conventions, JSON | – | #1 |
+| `broker` | Embedded ActiveMQ broker (own process) | 61616 | #2 |
+| `ingestion-service` | Downloads books into the datalake | 7001 | #3 |
+| `indexing-service` | Builds the inverted index and the metadata datamart | 7002 | #4 |
+| `search-service` | Front-end search API | 7003 | #5 |
+| `feeder` | Decides which books to ingest | 7004 | #2 |
+
+## Build and test
+
+```bash
+mvn verify          # compiles every module, runs all tests, builds the jars
+```
+
+Each runnable module produces one self-contained jar: `<module>/target/<module>.jar`.
+
+## Run a service
+
+```bash
+java -jar search-service/target/search-service.jar
+curl http://localhost:7003/status
+```
+
+## Configuration
+
+Each service reads its defaults from `src/main/resources/application.properties` inside its jar.
+Any key can be overridden, later layers winning:
+
+1. external file: `CONFIG_FILE=/path/to/file.properties`
+2. environment variable: key in upper case, `.` and `-` replaced by `_` (`server.port` → `SERVER_PORT`)
+3. JVM property: `-Dserver.port=7013`
+
+Example — a second replica of the search service on another port:
+
+```bash
+SERVER_PORT=7013 java -jar search-service/target/search-service.jar
+```
+
+Common keys:
+
+| Key | Meaning |
+|---|---|
+| `service.name` | Name reported by `/status` |
+| `server.port` | HTTP port of this process |
+| `server.threads.min` / `server.threads.max` | Jetty request threads of this process |
+| `data.dir` | Workspace root (datalake, datamarts) |
+| `broker.url` | ActiveMQ address |
+
+## Conventions for every service
+
+- All responses are JSON.
+- Errors always have the form `{"error": "<code>", "message": "<text>"}`:
+  400 for invalid parameters, 404 for unknown resources, 500 for unexpected failures (no internal details).
+- `GET /status` is the health endpoint of every HTTP service.
+
+## Continuous integration
+
+GitHub Actions (`.github/workflows/ci.yml`) runs `mvn verify` on every pull request and on `main`.
+Merge only green pull requests.

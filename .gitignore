@@ -1,0 +1,18 @@
+# Build output
+target/
+
+# Runtime data (datalake, datamarts, broker store, logs) - never committed
+data/
+logs/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
