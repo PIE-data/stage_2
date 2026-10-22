@@ -1,0 +1,5 @@
+# Same line endings on Windows, WSL and CI: scripts break with CRLF.
+* text=auto eol=lf
+*.jar binary
+*.png binary
+*.pdf binary
