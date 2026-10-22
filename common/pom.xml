@@ -27,5 +27,27 @@
             <artifactId>slf4j-simple</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Stage 1 reference files, bundled into the jar as spec/... (single source: ../spec). -->
+            <resource>
+                <directory>${project.basedir}/../spec</directory>
+                <targetPath>spec</targetPath>
+                <includes>
+                    <include>stopwords_en.txt</include>
+                    <include>language_map.txt</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
 </project>

@@ -27,6 +27,16 @@
         <gson.version>2.11.0</gson.version>
         <slf4j.version>2.0.9</slf4j.version>
         <junit.version>5.10.2</junit.version>
+        <jmh.version>1.37</jmh.version>
+
+        <!-- JMH run settings (brief section 6.3); override with -Djmh.include=... etc. -->
+        <jmh.include>.*</jmh.include>
+        <jmh.heap>4G</jmh.heap>
+        <jmh.warmup>5</jmh.warmup>
+        <jmh.iterations>10</jmh.iterations>
+        <jmh.forks>1</jmh.forks>
+        <jmh.threads>1</jmh.threads>
+        <jmh.output>${project.basedir}/../results/jmh/${project.artifactId}.csv</jmh.output>
     </properties>
 
     <!-- One place for every version: modules declare dependencies without versions. -->
@@ -57,6 +67,11 @@
                 <artifactId>junit-jupiter</artifactId>
                 <version>${junit.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-core</artifactId>
+                <version>${jmh.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -76,6 +91,41 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.13.0</version>
+                </plugin>
+                <!--
+                  Runs the JMH benchmarks of one module (classes under src/test/java/.../benchmark):
+                    mvn -q install -DskipTests
+                    mvn -pl <module> test-compile exec:exec [-Djmh.include=Tokenizer] [-Djmh.threads=4]
+                  Results: results/jmh/<module>.csv
+                -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>3.1.0</version>
+                    <configuration>
+                        <classpathScope>test</classpathScope>
+                        <executable>java</executable>
+                        <arguments>
+                            <argument>-classpath</argument>
+                            <classpath/>
+                            <argument>org.openjdk.jmh.Main</argument>
+                            <argument>${jmh.include}</argument>
+                            <argument>-jvmArgs</argument>
+                            <argument>-Xms${jmh.heap} -Xmx${jmh.heap}</argument>
+                            <argument>-wi</argument>
+                            <argument>${jmh.warmup}</argument>
+                            <argument>-i</argument>
+                            <argument>${jmh.iterations}</argument>
+                            <argument>-f</argument>
+                            <argument>${jmh.forks}</argument>
+                            <argument>-t</argument>
+                            <argument>${jmh.threads}</argument>
+                            <argument>-rf</argument>
+                            <argument>csv</argument>
+                            <argument>-rff</argument>
+                            <argument>${jmh.output}</argument>
+                        </arguments>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -125,5 +175,27 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <!-- JMH generates its benchmark code from the @Benchmark annotations in test classes. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <configuration>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.openjdk.jmh</groupId>
+                                    <artifactId>jmh-generator-annprocess</artifactId>
+                                    <version>${jmh.version}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>
