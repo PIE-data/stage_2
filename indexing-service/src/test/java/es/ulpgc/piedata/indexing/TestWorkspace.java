@@ -17,24 +17,24 @@ import java.util.zip.GZIPInputStream;
  * A data folder with the 20 golden books already "ingested": header and body in the hash layout
  * plus a receipt each, exactly what the Ingestion service (#3) will produce.
  */
-final class TestWorkspace {
+public final class TestWorkspace {
 
-    static final Path GOLDEN = Path.of("..", "spec", "golden");
+    public static final Path GOLDEN = Path.of("..", "spec", "golden");
 
     private TestWorkspace() {
     }
 
-    static List<Long> goldenIds() throws IOException {
+    public static List<Long> goldenIds() throws IOException {
         return Files.readAllLines(GOLDEN.resolve("manifest_20.txt"), StandardCharsets.UTF_8).stream()
                 .map(String::strip).filter(s -> !s.isEmpty()).map(Long::parseLong).sorted().toList();
     }
 
-    static String expectedCanonicalSha256() throws IOException {
+    public static String expectedCanonicalSha256() throws IOException {
         return Files.readString(GOLDEN.resolve("expected.sha256")).strip().split("\\s+")[0];
     }
 
     /** Puts every golden book into {@code dataDir}; returns their ids. */
-    static List<Long> ingestGolden(Path dataDir) throws IOException {
+    public static List<Long> ingestGolden(Path dataDir) throws IOException {
         List<Long> ids = goldenIds();
         for (long id : ids) {
             ingest(dataDir, id);
@@ -42,7 +42,7 @@ final class TestWorkspace {
         return ids;
     }
 
-    static void ingest(Path dataDir, long id) throws IOException {
+    public static void ingest(Path dataDir, long id) throws IOException {
         Path header = dataDir.resolve(HashLayout.headerPath(id));
         Path body = dataDir.resolve(HashLayout.bodyPath(id));
         Files.createDirectories(header.getParent());
