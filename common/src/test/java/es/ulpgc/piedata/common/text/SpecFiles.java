@@ -28,6 +28,16 @@ public final class SpecFiles {
         return specDir().resolve("golden");
     }
 
+    /** Header of a golden book as produced by the Stage 1 splitter. */
+    public static String goldenHeader(long bookId) {
+        Path file = golden().resolve("headers").resolve(bookId + ".header.txt");
+        try {
+            return Files.readString(file, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException("cannot read " + file, e);
+        }
+    }
+
     /** Body of a golden book as produced by the Stage 1 splitter. */
     public static String goldenBody(long bookId) {
         Path file = golden().resolve("bodies").resolve(bookId + ".body.txt.gz");
