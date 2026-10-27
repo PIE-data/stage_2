@@ -67,7 +67,13 @@ mvn -pl common test-compile exec:exec            # all benchmarks of a module
 mvn -pl common test-compile exec:exec -Djmh.include=TokenizerBenchmark -Djmh.threads=4
 ```
 
-Results are written to `results/jmh/<module>.csv`. Run benchmarks on an idle machine and
+Results are written to `results/jmh/<module>.csv`.
+
+Indexing path (tokenize + parse, SQLite write, 1/2/4/8 threads in one process), about 25 minutes:
+
+```bash
+bash scripts/bench-indexing.sh                  # results in results/jmh/<date>/ with host.txt
+``` Run benchmarks on an idle machine and
 record its specification together with the results.
 
 ## Indexing service API (internal / administrative)
