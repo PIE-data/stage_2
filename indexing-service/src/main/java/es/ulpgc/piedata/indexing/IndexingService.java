@@ -9,7 +9,6 @@ import es.ulpgc.piedata.common.http.ApiException;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -36,11 +35,16 @@ public final class IndexingService implements AutoCloseable {
     private final AtomicBoolean rebuilding = new AtomicBoolean(false);
 
     public IndexingService(Path dataDir) throws SQLException {
+        this(dataDir, Datamart.DEFAULT_CACHE_MB);
+    }
+
+    /** @param cacheMb SQLite page cache of the writer connection, MiB ({@code datamart.cache-mb}) */
+    public IndexingService(Path dataDir, int cacheMb) throws SQLException {
         this.dataDir = dataDir;
         this.receipts = new ReceiptStore(dataDir);
         this.indexer = BookIndexer.standard();
         this.datamartFile = Datamart.defaultFile(dataDir);
-        this.datamart = Datamart.open(datamartFile);
+        this.datamart = Datamart.open(datamartFile, java.time.Clock.systemUTC(), cacheMb);
     }
 
     /** Result of indexing one book. */
@@ -129,11 +133,7 @@ public final class IndexingService implements AutoCloseable {
     /** Reads header and body of an ingested book and indexes it (no datamart access). */
     private IndexedBook load(Receipt r) {
         try {
-            byte[] header = Files.readAllBytes(dataDir.resolve(r.headerPath()));
-            byte[] body = Files.readAllBytes(dataDir.resolve(r.bodyPath()));
-            // Invalid UTF-8 is replaced, never fatal (as in Stage 1).
-            return indexer.index(r.bookId(), new String(header, StandardCharsets.UTF_8), body,
-                    r.headerPath(), r.bodyPath(), r.ingestedAt());
+            return indexer.index(dataDir, r);
         } catch (NoSuchFileException e) {
             throw new ApiException(409, "datalake_inconsistent",
                     "book " + r.bookId() + " has a receipt but its file is missing: " + e.getFile());

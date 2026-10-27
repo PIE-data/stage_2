@@ -38,6 +38,8 @@
         <jmh.forks>1</jmh.forks>
         <jmh.threads>1</jmh.threads>
         <jmh.output>${project.basedir}/../results/jmh/${project.artifactId}.csv</jmh.output>
+        <!-- Optional data folder with a larger datalake for the indexing benchmarks (no spaces in the path). -->
+        <bench.datadir></bench.datadir>
     </properties>
 
     <!-- One place for every version: modules declare dependencies without versions. -->
@@ -117,7 +119,7 @@
                             <argument>org.openjdk.jmh.Main</argument>
                             <argument>${jmh.include}</argument>
                             <argument>-jvmArgs</argument>
-                            <argument>-Xms${jmh.heap} -Xmx${jmh.heap}</argument>
+                            <argument>-Xms${jmh.heap} -Xmx${jmh.heap} -Dbench.datadir=${bench.datadir}</argument>
                             <argument>-wi</argument>
                             <argument>${jmh.warmup}</argument>
                             <argument>-i</argument>

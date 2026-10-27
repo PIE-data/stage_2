@@ -1,6 +1,7 @@
 package es.ulpgc.piedata.indexing;
 
 import es.ulpgc.piedata.common.config.AppConfig;
+import es.ulpgc.piedata.common.datamart.Datamart;
 import es.ulpgc.piedata.common.http.BadRequestException;
 import es.ulpgc.piedata.common.http.ServiceServer;
 import es.ulpgc.piedata.common.json.Json;
@@ -48,7 +49,8 @@ public final class IndexingApp {
     /** Opens the datamart under {@code data.dir}. */
     public static IndexingService openService(AppConfig config) {
         try {
-            return new IndexingService(config.getPath("data.dir"));
+            return new IndexingService(config.getPath("data.dir"),
+                    config.getInt("datamart.cache-mb", Datamart.DEFAULT_CACHE_MB));
         } catch (SQLException e) {
             throw new IllegalStateException("cannot open the datamart under " + config.get("data.dir"), e);
         }

@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.time.Clock;
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -25,8 +26,10 @@ import java.util.stream.Stream;
 /**
  * Cost of writing one already-indexed book into SQLite: one transaction that removes the previous
  * version (df -1, delete postings), writes the metadata row, the postings and df +1, then commits.
- * The datamart already holds the 20 golden books, so every call is a realistic re-index.
- * Includes the disk sync of the commit (WAL, synchronous=NORMAL): run on the real target disk.
+ *
+ * <p>The datamart is first filled with {@link BenchData#preload()}: the 20 golden books, plus a
+ * whole datalake when {@code -Dbench.datadir} is given, because write cost grows with the index.
+ * {@code cacheMb} compares SQLite's tiny default page cache (2 MiB) with the configured one.
  * Run: {@code mvn -pl common test-compile exec:exec -Djmh.include=DatamartWriteBenchmark}
  */
 @State(Scope.Benchmark)
@@ -37,6 +40,10 @@ public class DatamartWriteBenchmark {
     @Param({"8708", "36020"})
     public long bookId;
 
+    /** SQLite page cache of the connection, MiB. */
+    @Param({"2", "256"})
+    public int cacheMb;
+
     private Path dir;
     private Datamart datamart;
     private IndexedBook book;
@@ -44,8 +51,11 @@ public class DatamartWriteBenchmark {
     @Setup(Level.Trial)
     public void open() throws IOException, SQLException {
         dir = Files.createTempDirectory("datamart-bench");
-        datamart = Datamart.open(dir.resolve("datamart.db"));
-        datamart.writeAll(GoldenBooks.all());
+        datamart = Datamart.open(dir.resolve("datamart.db"), Clock.systemUTC(), cacheMb);
+        long start = System.nanoTime();
+        int books = datamart.rebuild(BenchData.preload());
+        System.out.printf("%n[setup] datamart filled with %d books in %.1f s (cache %d MiB)%n",
+                books, (System.nanoTime() - start) / 1e9, cacheMb);
         book = GoldenBooks.all().stream().filter(b -> b.bookId() == bookId).findFirst().orElseThrow();
     }
 

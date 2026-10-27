@@ -52,6 +52,13 @@ public final class Datamart implements AutoCloseable {
 
     static final int BUSY_TIMEOUT_MS = 30_000;
 
+    /**
+     * Default SQLite page cache per connection, in MiB. SQLite's own default is only ~2 MiB, which
+     * makes every B-tree insert go back to disk once the index is larger than that (Stage 1 SPEC
+     * §5.3 used 256 MiB for the same reason). Configurable: {@code datamart.cache-mb}.
+     */
+    public static final int DEFAULT_CACHE_MB = 256;
+
     private static final String INSERT_BOOK =
             "INSERT OR REPLACE INTO books (book_id, title, author, language, release_date, release_year,"
                     + " header_path, body_path, body_bytes, sha256, n_tokens, ingested_at, indexed_at)"
@@ -75,13 +82,25 @@ public final class Datamart implements AutoCloseable {
         this.clock = clock;
     }
 
-    /** Opens (creating it if needed) the datamart file for writing. */
+    /** Opens (creating it if needed) the datamart file for writing, with the default cache. */
     public static Datamart open(Path file) throws SQLException {
-        return open(file, Clock.systemUTC());
+        return open(file, Clock.systemUTC(), DEFAULT_CACHE_MB);
     }
 
     /** As {@link #open(Path)}, with the clock used for {@code indexed_at} (tests). */
     public static Datamart open(Path file, Clock clock) throws SQLException {
+        return open(file, clock, DEFAULT_CACHE_MB);
+    }
+
+    /**
+     * Opens the datamart with an explicit page-cache size.
+     *
+     * @param cacheMb SQLite page cache of this connection in MiB (memory is used only as pages are read)
+     */
+    public static Datamart open(Path file, Clock clock, int cacheMb) throws SQLException {
+        if (cacheMb < 1) {
+            throw new IllegalArgumentException("cacheMb must be at least 1, got " + cacheMb);
+        }
         try {
             Path parent = file.toAbsolutePath().getParent();
             if (parent != null) {
@@ -96,6 +115,7 @@ public final class Datamart implements AutoCloseable {
             s.execute("PRAGMA journal_mode = WAL");
             s.execute("PRAGMA synchronous = NORMAL");
             s.execute("PRAGMA foreign_keys = ON");
+            s.execute("PRAGMA cache_size = " + (-1024L * cacheMb));   // negative = KiB, not pages
         }
         Datamart d = new Datamart(c, clock);
         d.createSchema();

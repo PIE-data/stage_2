@@ -14,6 +14,7 @@ PRAGMA journal_mode = WAL;        -- readers never block the writer and vice ver
 PRAGMA synchronous  = NORMAL;     -- durable at checkpoint; acceptable for a rebuildable index
 PRAGMA busy_timeout = 30000;      -- wait up to 30 s for another writer instead of failing
 PRAGMA foreign_keys = ON;
+PRAGMA cache_size   = -262144;     -- 256 MiB page cache (datamart.cache-mb); the 2 MiB default thrashes
 ```
 
 - Reader connections (Search): open with `jdbc:sqlite:file:<path>?mode=ro` and

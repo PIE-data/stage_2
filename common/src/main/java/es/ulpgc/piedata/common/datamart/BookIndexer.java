@@ -1,9 +1,13 @@
 package es.ulpgc.piedata.common.datamart;
 
+import es.ulpgc.piedata.common.datalake.Receipt;
 import es.ulpgc.piedata.common.metadata.HeaderParser;
 import es.ulpgc.piedata.common.text.Tokenizer;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -32,6 +36,19 @@ public final class BookIndexer {
     /** Indexer with the Stage 1 language map and stop words. */
     public static BookIndexer standard() {
         return new BookIndexer(HeaderParser.standard(), Tokenizer.english());
+    }
+
+    /**
+     * Reads an ingested book from the datalake (paths of its receipt, relative to {@code dataDir})
+     * and indexes it. Invalid UTF-8 is replaced, never fatal (as in Stage 1).
+     *
+     * @throws java.nio.file.NoSuchFileException if the receipt points to a missing file
+     */
+    public IndexedBook index(Path dataDir, Receipt r) throws IOException {
+        byte[] header = Files.readAllBytes(dataDir.resolve(r.headerPath()));
+        byte[] body = Files.readAllBytes(dataDir.resolve(r.bodyPath()));
+        return index(r.bookId(), new String(header, StandardCharsets.UTF_8), body,
+                r.headerPath(), r.bodyPath(), r.ingestedAt());
     }
 
     public IndexedBook index(long bookId, String header, byte[] body,
