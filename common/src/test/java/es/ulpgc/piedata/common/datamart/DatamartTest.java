@@ -177,4 +177,14 @@ class DatamartTest {
             assertEquals(0, d.inconsistentTerms());
         }
     }
+
+    @Test
+    void cacheSizeIsApplied(@TempDir Path dir) throws Exception {
+        assertThrows(IllegalArgumentException.class, () -> Datamart.open(dir.resolve("x.db"), FIXED, 0));
+        Path file = dir.resolve("datamart.db");
+        try (Datamart d = Datamart.open(file, FIXED, 64)) {
+            d.write(book(1, "A", postings("whale", new int[] {1})));
+            assertTrue(d.contains(1));
+        }
+    }
 }

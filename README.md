@@ -69,11 +69,16 @@ mvn -pl common test-compile exec:exec -Djmh.include=TokenizerBenchmark -Djmh.thr
 
 Results are written to `results/jmh/<module>.csv`.
 
-Indexing path (tokenize + parse, SQLite write, 1/2/4/8 threads in one process), about 25 minutes:
+Indexing path (tokenize + parse, SQLite write with page cache 2 vs 256 MiB, 1/2/4/8 threads in
+one process):
 
 ```bash
-bash scripts/bench-indexing.sh                  # results in results/jmh/<date>/ with host.txt
-``` Run benchmarks on an idle machine and
+bash scripts/bench-indexing.sh                                    # 20 golden books (~35 min)
+bash scripts/prepare-bench-datalake.sh 1000                       # once: tier-1000 datalake from the mirror
+BENCH_DATADIR=~/bench/s2-tier1000 bash scripts/bench-indexing.sh  # + realistic index size (~1-2 h)
+```
+
+Results go to `results/jmh/<date>/` together with `host.txt` (machine specification). Run benchmarks on an idle machine and
 record its specification together with the results.
 
 ## Indexing service API (internal / administrative)
@@ -112,6 +117,7 @@ Common keys:
 | `data.dir` | Workspace root (datalake, datamarts) |
 | `broker.url` | ActiveMQ address |
 | `consumer.threads` | Message consumer sessions per process (ingestion, indexing) |
+| `datamart.cache-mb` | SQLite page cache of the datamart writer, MiB (default 256) |
 
 ## Conventions for every service
 
