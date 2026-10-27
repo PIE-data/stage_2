@@ -16,8 +16,10 @@ through an ActiveMQ message broker and REST APIs, all running on one machine.
 
 `spec/` holds the frozen Stage 1 inputs and oracles (stop words, language map, golden books,
 expected hashes, corpus manifests, query sets). See [spec/README.md](spec/README.md).
-The Java tokenizer (`common`, `es.ulpgc.piedata.common.text.Tokenizer`) is verified against
-`spec/golden/tokens_20.jsonl` by `GoldenTokensTest`.
+The Java ports in `common` are verified against Stage 1: the tokenizer
+(`es.ulpgc.piedata.common.text.Tokenizer`) against `spec/golden/tokens_20.jsonl` by
+`GoldenTokensTest`, the header parser (`es.ulpgc.piedata.common.metadata.HeaderParser`)
+against `spec/golden/metadata_20.jsonl` by `GoldenMetadataTest`.
 
 ## Requirements
 
