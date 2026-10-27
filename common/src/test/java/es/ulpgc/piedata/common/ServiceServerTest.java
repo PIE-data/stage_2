@@ -1,6 +1,7 @@
 package es.ulpgc.piedata.common;
 
 import es.ulpgc.piedata.common.config.AppConfig;
+import es.ulpgc.piedata.common.http.ApiException;
 import es.ulpgc.piedata.common.http.BadRequestException;
 import es.ulpgc.piedata.common.http.ServiceServer;
 import es.ulpgc.piedata.common.json.Json;
@@ -32,6 +33,7 @@ class ServiceServerTest {
         app = ServiceServer.create(config);
         app.get("/boom", ctx -> { throw new IllegalStateException("boom"); });
         app.get("/missing", ctx -> { throw new NotFoundResponse("book 42 not found"); });
+        app.get("/busy", ctx -> { throw new ApiException(503, "datamart_busy", "retry later"); });
         app.get("/bad", ctx -> { throw new BadRequestException("invalid_parameter", "limit must be 1-100"); });
         app.start(0);
     }
@@ -70,6 +72,13 @@ class ServiceServerTest {
         HttpResponse<String> r = get("/missing");
         assertEquals(404, r.statusCode());
         assertEquals("{\"error\":\"not_found\",\"message\":\"book 42 not found\"}", r.body());
+    }
+
+    @Test
+    void apiExceptionKeepsItsStatusAndCode() throws Exception {
+        HttpResponse<String> r = get("/busy");
+        assertEquals(503, r.statusCode());
+        assertEquals("{\"error\":\"datamart_busy\",\"message\":\"retry later\"}", r.body());
     }
 
     @Test

@@ -142,38 +142,70 @@ public final class Datamart implements AutoCloseable {
      * visible or none does.
      */
     public synchronized void writeAll(Collection<IndexedBook> books) throws SQLException {
-        String indexedAt = Instant.now(clock).truncatedTo(ChronoUnit.SECONDS).toString();
+        String indexedAt = now();
+        inTransaction(() -> writeBooks(books, indexedAt));
+    }
+
+    /**
+     * Replaces the whole content with {@code books} in ONE transaction: readers keep seeing the old
+     * index until the commit, then the new one; on any error nothing changes. The iterable is
+     * consumed lazily, so books can be read and indexed while they are written (memory stays low).
+     * Other writers wait until the rebuild commits (or give up after {@code busy_timeout}).
+     *
+     * @return the number of books written
+     */
+    public synchronized int rebuild(Iterable<IndexedBook> books) throws SQLException {
+        String indexedAt = now();
+        int[] count = {0};
         inTransaction(() -> {
-            try (PreparedStatement decrement = connection.prepareStatement(DECREMENT_DF);
-                 PreparedStatement deleteTerms = connection.prepareStatement(DELETE_UNUSED_TERMS);
-                 PreparedStatement deletePostings = connection.prepareStatement(DELETE_POSTINGS);
-                 PreparedStatement insertBook = connection.prepareStatement(INSERT_BOOK);
-                 PreparedStatement insertPosting = connection.prepareStatement(INSERT_POSTING);
-                 PreparedStatement incrementDf = connection.prepareStatement(INCREMENT_DF)) {
-                for (IndexedBook book : books) {
-                    // 1. remove the previous version, if any (re-indexing must not duplicate)
-                    for (PreparedStatement p : List.of(decrement, deleteTerms, deletePostings)) {
-                        p.setLong(1, book.bookId());
-                        p.executeUpdate();
-                    }
-                    // 2. metadata row
-                    bindBook(insertBook, book, indexedAt);
-                    insertBook.executeUpdate();
-                    // 3. postings and df, one row per distinct term
-                    for (Map.Entry<String, int[]> e : book.postings().entrySet()) {
-                        insertPosting.setString(1, e.getKey());
-                        insertPosting.setLong(2, book.bookId());
-                        insertPosting.setInt(3, e.getValue().length);
-                        insertPosting.setString(4, CanonicalExport.csv(e.getValue()));
-                        insertPosting.addBatch();
-                        incrementDf.setString(1, e.getKey());
-                        incrementDf.addBatch();
-                    }
-                    insertPosting.executeBatch();
-                    incrementDf.executeBatch();
-                }
+            try (Statement s = connection.createStatement()) {
+                s.execute("DELETE FROM postings");
+                s.execute("DELETE FROM terms");
+                s.execute("DELETE FROM books");
             }
+            count[0] = writeBooks(books, indexedAt);
         });
+        return count[0];
+    }
+
+    private String now() {
+        return Instant.now(clock).truncatedTo(ChronoUnit.SECONDS).toString();
+    }
+
+    /** Body of a write transaction; returns how many books were written. */
+    private int writeBooks(Iterable<IndexedBook> books, String indexedAt) throws SQLException {
+        int written = 0;
+        try (PreparedStatement decrement = connection.prepareStatement(DECREMENT_DF);
+             PreparedStatement deleteTerms = connection.prepareStatement(DELETE_UNUSED_TERMS);
+             PreparedStatement deletePostings = connection.prepareStatement(DELETE_POSTINGS);
+             PreparedStatement insertBook = connection.prepareStatement(INSERT_BOOK);
+             PreparedStatement insertPosting = connection.prepareStatement(INSERT_POSTING);
+             PreparedStatement incrementDf = connection.prepareStatement(INCREMENT_DF)) {
+            for (IndexedBook book : books) {
+                // 1. remove the previous version, if any (re-indexing must not duplicate)
+                for (PreparedStatement p : List.of(decrement, deleteTerms, deletePostings)) {
+                    p.setLong(1, book.bookId());
+                    p.executeUpdate();
+                }
+                // 2. metadata row
+                bindBook(insertBook, book, indexedAt);
+                insertBook.executeUpdate();
+                // 3. postings and df, one row per distinct term
+                for (Map.Entry<String, int[]> e : book.postings().entrySet()) {
+                    insertPosting.setString(1, e.getKey());
+                    insertPosting.setLong(2, book.bookId());
+                    insertPosting.setInt(3, e.getValue().length);
+                    insertPosting.setString(4, CanonicalExport.csv(e.getValue()));
+                    insertPosting.addBatch();
+                    incrementDf.setString(1, e.getKey());
+                    incrementDf.addBatch();
+                }
+                insertPosting.executeBatch();
+                incrementDf.executeBatch();
+                written++;
+            }
+        }
+        return written;
     }
 
     private static void bindBook(PreparedStatement p, IndexedBook b, String indexedAt) throws SQLException {
