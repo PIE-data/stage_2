@@ -70,6 +70,17 @@ mvn -pl common test-compile exec:exec -Djmh.include=TokenizerBenchmark -Djmh.thr
 Results are written to `results/jmh/<module>.csv`. Run benchmarks on an idle machine and
 record its specification together with the results.
 
+## Indexing service API (internal / administrative)
+
+| Method and route | Purpose | Success |
+|---|---|---|
+| `POST /index/update/{book_id}` | index one ingested book (idempotent) | `200` once committed and searchable |
+| `POST /index/rebuild` | rebuild the datamart from every receipt, atomically | `200` with `books_processed`, `elapsed_time` |
+| `GET /index/status` | `books_indexed`, `terms`, `postings`, `last_update`, `index_size_MB` | `200` |
+
+Errors: `400 invalid_book_id`, `404 not_ingested` (no receipt), `409 datalake_inconsistent`
+(receipt without file), `409 rebuild_in_progress`, `503 datamart_busy` (retry later).
+
 ## Configuration
 
 Each service reads its defaults from `src/main/resources/application.properties` inside its jar.

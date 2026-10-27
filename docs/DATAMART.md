@@ -99,9 +99,12 @@ COMMIT;
 - `df` is maintained **incrementally** (+1/−1 per book), never recomputed with `COUNT(*)`:
   recounting per book is quadratic in the corpus size (Stage 1 lesson, SPEC §6.3).
 - The `books.indexed` message is published only **after** `COMMIT` returns (EVENTS.md §5).
-- `POST /index/rebuild` writes a new file `datamart.db.new` from the whole datalake and then
-  atomically renames it over `datamart.db`; Search reopens its connections when the file changes
-  (checked at most once per second). Normal incremental indexing never replaces the file.
+- `POST /index/rebuild` replaces the whole content **in one transaction** (delete all rows, then
+  write every ingested book): readers keep seeing the previous index until the commit, and a failed
+  rebuild changes nothing. The file is never replaced, because swapping a SQLite file in WAL mode
+  while other processes have it open would pair the new file with the old `-wal` file and corrupt
+  it. Cost: other writers wait during the rebuild (up to `busy_timeout`, then their message is
+  redelivered).
 
 ## 4. Reading (Search)
 

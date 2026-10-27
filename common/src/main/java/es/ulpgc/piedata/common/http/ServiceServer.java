@@ -19,8 +19,9 @@ import java.util.Map;
  *   <li>JSON responses ({@code application/json});</li>
  *   <li>request thread pool sized from {@code server.threads.min} / {@code server.threads.max};</li>
  *   <li>{@code GET /status} health endpoint;</li>
- *   <li>errors always returned as {@link ApiError}: 400 for {@link BadRequestException},
- *       404 for unknown routes, 500 for anything unexpected.</li>
+ *   <li>errors always returned as {@link ApiError}: the chosen status for {@link ApiException}
+ *       (400 for {@link BadRequestException}), 404 for unknown routes, 500 for anything
+ *       unexpected.</li>
  * </ul>
  * Each service adds its own routes to the returned {@link Javalin} before calling {@code start}.
  */
@@ -54,8 +55,8 @@ public final class ServiceServer {
             ctx.result(Json.write(body));
         });
 
-        app.exception(BadRequestException.class, (e, ctx) ->
-                ctx.status(400).result(Json.write(new ApiError(e.code(), e.getMessage()))));
+        app.exception(ApiException.class, (e, ctx) ->
+                ctx.status(e.status()).result(Json.write(new ApiError(e.code(), e.getMessage()))));
         // Javalin's own responses (unknown route, NotFoundResponse thrown by a handler, ...).
         // Mapped explicitly, otherwise the generic handler below would turn them into 500.
         app.exception(HttpResponseException.class, (e, ctx) ->

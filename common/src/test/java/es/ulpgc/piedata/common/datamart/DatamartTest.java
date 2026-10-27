@@ -141,4 +141,40 @@ class DatamartTest {
             assertEquals(0, d.inconsistentTerms());
         }
     }
+
+    @Test
+    void rebuildReplacesEverythingAtOnce(@TempDir Path dir) throws Exception {
+        try (Datamart d = Datamart.open(dir.resolve("datamart.db"))) {
+            d.write(book(999, "Old", postings("obsolete", new int[] {1})));
+            assertEquals(20, d.rebuild(GoldenBooks.all()));
+            assertFalse(d.contains(999), "books not in the rebuild are gone");
+            assertEquals(GoldenBooks.expectedCanonicalSha256(), sha256(d.exportCanonical()));
+        }
+    }
+
+    @Test
+    void aFailedRebuildKeepsTheOldIndex(@TempDir Path dir) throws Exception {
+        try (Datamart d = Datamart.open(dir.resolve("datamart.db"))) {
+            d.writeAll(GoldenBooks.all());
+            Iterable<IndexedBook> broken = () -> new java.util.Iterator<>() {
+                private int n = 0;
+
+                @Override
+                public boolean hasNext() {
+                    return true;
+                }
+
+                @Override
+                public IndexedBook next() {
+                    if (n++ == 3) {
+                        throw new IllegalStateException("datalake file missing");
+                    }
+                    return GoldenBooks.all().get(n);
+                }
+            };
+            assertThrows(IllegalStateException.class, () -> d.rebuild(broken));
+            assertEquals(GoldenBooks.expectedCanonicalSha256(), sha256(d.exportCanonical()));
+            assertEquals(0, d.inconsistentTerms());
+        }
+    }
 }
