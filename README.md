@@ -19,7 +19,9 @@ expected hashes, corpus manifests, query sets). See [spec/README.md](spec/README
 The Java ports in `common` are verified against Stage 1: the tokenizer
 (`es.ulpgc.piedata.common.text.Tokenizer`) against `spec/golden/tokens_20.jsonl` by
 `GoldenTokensTest`, the header parser (`es.ulpgc.piedata.common.metadata.HeaderParser`)
-against `spec/golden/metadata_20.jsonl` by `GoldenMetadataTest`.
+against `spec/golden/metadata_20.jsonl` by `GoldenMetadataTest`; the datamart writer
+(`es.ulpgc.piedata.common.datamart.Datamart`) against `spec/golden/expected.sha256` by
+`GoldenDatamartTest` (canonical export of the 20 golden books stored in SQLite).
 
 ## Requirements
 

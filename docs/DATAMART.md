@@ -83,8 +83,9 @@ BEGIN IMMEDIATE;                                   -- take the write lock now (w
 -- 1. remove the previous version, if any (re-indexing must not duplicate)
 UPDATE terms SET df = df - 1
   WHERE term IN (SELECT term FROM postings WHERE book_id = :id);
+DELETE FROM terms WHERE df <= 0
+  AND term IN (SELECT term FROM postings WHERE book_id = :id);   -- only this book's terms: no full scan
 DELETE FROM postings WHERE book_id = :id;
-DELETE FROM terms WHERE df <= 0;
 -- 2. metadata
 INSERT OR REPLACE INTO books (...) VALUES (...);
 -- 3. postings, in term order
@@ -94,6 +95,7 @@ INSERT INTO terms (term, df) VALUES (:term, 1)
 COMMIT;
 ```
 
+- Implemented by `common/.../datamart/Datamart.java`; the schema is `common/src/main/resources/datamart/schema.sql`.
 - `df` is maintained **incrementally** (+1/−1 per book), never recomputed with `COUNT(*)`:
   recounting per book is quadratic in the corpus size (Stage 1 lesson, SPEC §6.3).
 - The `books.indexed` message is published only **after** `COMMIT` returns (EVENTS.md §5).
