@@ -1,0 +1,9 @@
+"Benchmark","Mode","Threads","Samples","Score","Score Error (99.9%)","Unit","Param: bookId","Param: cacheMb"
+"es.ulpgc.piedata.common.benchmark.DatamartBatchBenchmark.oneBatch","avgt",1,10,18.109213,0.210297,"ms/op",,
+"es.ulpgc.piedata.common.benchmark.DatamartBatchBenchmark.oneTransactionPerBook","avgt",1,10,27.247033,0.543643,"ms/op",,
+"es.ulpgc.piedata.common.benchmark.DatamartInsertBenchmark.insert","avgt",1,10,7.378365,0.196239,"ms/op",8708,
+"es.ulpgc.piedata.common.benchmark.DatamartInsertBenchmark.insert","avgt",1,10,85.573810,2.546010,"ms/op",36020,
+"es.ulpgc.piedata.common.benchmark.DatamartWriteBenchmark.write","avgt",1,10,16.362353,0.356874,"ms/op",8708,2
+"es.ulpgc.piedata.common.benchmark.DatamartWriteBenchmark.write","avgt",1,10,13.287869,0.970144,"ms/op",8708,256
+"es.ulpgc.piedata.common.benchmark.DatamartWriteBenchmark.write","avgt",1,10,160.462904,2.283092,"ms/op",36020,2
+"es.ulpgc.piedata.common.benchmark.DatamartWriteBenchmark.write","avgt",1,10,153.699001,39.906462,"ms/op",36020,256

@@ -1,0 +1,13 @@
+date: 2026-10-28T11:38:27Z
+commit: 05bcfec
+bench datadir: /home/andrea/bench/s2-tier1000
+books in datadir: 1000
+Linux MSI 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 GNU/Linux
+CPU(s):                               12
+Model name:                           12th Gen Intel(R) Core(TM) i7-1255U
+Thread(s) per core:                   2
+Core(s) per socket:                   6
+               total        used        free      shared  buff/cache   available
+Mem:            10Gi       546Mi        10Gi       3.6Mi       182Mi        10Gi
+/dev/sdd       1007G   47G  910G   5% /
+openjdk version "21.0.12.1" 2026-08-18

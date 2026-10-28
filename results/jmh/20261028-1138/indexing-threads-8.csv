@@ -1,0 +1,3 @@
+"Benchmark","Mode","Threads","Samples","Score","Score Error (99.9%)","Unit"
+"es.ulpgc.piedata.indexing.benchmark.IndexingThroughputBenchmark.batchOf20","thrpt",8,10,10.916990,2.425544,"ops/s"
+"es.ulpgc.piedata.indexing.benchmark.IndexingThroughputBenchmark.oneBookPerCall","thrpt",8,10,4.772877,1.187924,"ops/s"
