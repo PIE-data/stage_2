@@ -20,9 +20,14 @@ import java.sql.Types;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Writer side of the datamart ({@code docs/DATAMART.md}): one SQLite file with books, terms and
@@ -65,8 +70,6 @@ public final class Datamart implements AutoCloseable {
                     + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String INSERT_POSTING =
             "INSERT INTO postings (term, book_id, tf, positions) VALUES (?, ?, ?, ?)";
-    private static final String INCREMENT_DF =
-            "INSERT INTO terms (term, df) VALUES (?, 1) ON CONFLICT(term) DO UPDATE SET df = df + 1";
     // Removing a previous version: only the terms of that book are touched (never a full scan).
     private static final String DECREMENT_DF =
             "UPDATE terms SET df = df - 1 WHERE term IN (SELECT term FROM postings WHERE book_id = ?)";
@@ -152,38 +155,107 @@ public final class Datamart implements AutoCloseable {
         }
     }
 
+    /** Books written per chunk during a rebuild (postings of a chunk are sorted before insertion). */
+    static final int REBUILD_CHUNK = 32;
+
+    private static final String INSERT_TERM = "INSERT INTO terms (term, df) VALUES (?, ?)";
+    private static final String ADD_DF =
+            "INSERT INTO terms (term, df) VALUES (?, ?) ON CONFLICT(term) DO UPDATE SET df = df + excluded.df";
+    private static final String DELETE_BOOK = "DELETE FROM books WHERE book_id = ?";
+
     /** Writes (or replaces) one book in its own transaction. */
     public void write(IndexedBook book) throws SQLException {
         writeAll(List.of(book));
     }
 
     /**
-     * Writes several books in one transaction (faster for rebuilds). Either all of them become
-     * visible or none does.
+     * Writes (or replaces) several books in ONE transaction: all of them become visible together,
+     * or none does. Much cheaper per book than separate transactions: the postings of the whole
+     * batch are inserted in key order and each term's df is updated once. If the same book appears
+     * twice, the last version wins.
      */
     public synchronized void writeAll(Collection<IndexedBook> books) throws SQLException {
         String indexedAt = now();
-        inTransaction(() -> writeBooks(books, indexedAt));
+        Map<Long, IndexedBook> unique = new LinkedHashMap<>();
+        for (IndexedBook b : books) {
+            unique.remove(b.bookId());
+            unique.put(b.bookId(), b);
+        }
+        inTransaction(() -> {
+            removePrevious(unique.keySet());
+            Map<String, Integer> df = insertBooksAndPostings(unique.values(), indexedAt);
+            try (PreparedStatement add = connection.prepareStatement(ADD_DF)) {
+                addTerms(add, df);
+            }
+        });
+    }
+
+    /** Removes a book (metadata and postings) in one transaction; nothing happens if it is absent. */
+    public synchronized void remove(long bookId) throws SQLException {
+        inTransaction(() -> {
+            removePrevious(List.of(bookId));
+            try (PreparedStatement p = connection.prepareStatement(DELETE_BOOK)) {
+                p.setLong(1, bookId);
+                p.executeUpdate();
+            }
+        });
     }
 
     /**
      * Replaces the whole content with {@code books} in ONE transaction: readers keep seeing the old
-     * index until the commit, then the new one; on any error nothing changes. The iterable is
-     * consumed lazily, so books can be read and indexed while they are written (memory stays low).
-     * Other writers wait until the rebuild commits (or give up after {@code busy_timeout}).
+     * index until the commit, then the new one; on any error nothing changes. Other writers wait
+     * until the rebuild commits (or give up after {@code busy_timeout}).
+     *
+     * <p>Fast path for a full load: the tables are dropped and recreated (no row-by-row deletes),
+     * secondary indexes are built once at the end, postings are inserted in sorted chunks and df is
+     * counted in memory and written once per term. The iterable is consumed lazily, chunk by chunk,
+     * so memory stays bounded by one chunk plus the term counts.
      *
      * @return the number of books written
+     * @throws IllegalArgumentException if a book id appears twice
      */
     public synchronized int rebuild(Iterable<IndexedBook> books) throws SQLException {
         String indexedAt = now();
         int[] count = {0};
+        List<String> schema = schemaStatements();
         inTransaction(() -> {
             try (Statement s = connection.createStatement()) {
-                s.execute("DELETE FROM postings");
-                s.execute("DELETE FROM terms");
-                s.execute("DELETE FROM books");
+                // children first: dropping a parent table with foreign keys on checks its children
+                s.execute("DROP TABLE IF EXISTS postings");
+                s.execute("DROP TABLE IF EXISTS terms");
+                s.execute("DROP TABLE IF EXISTS books");
+                for (String sql : schema) {
+                    if (!sql.startsWith("CREATE INDEX")) {
+                        s.execute(sql);
+                    }
+                }
             }
-            count[0] = writeBooks(books, indexedAt);
+            Map<String, Integer> df = new HashMap<>();
+            Set<Long> seen = new HashSet<>();
+            List<IndexedBook> chunk = new ArrayList<>(REBUILD_CHUNK);
+            for (IndexedBook b : books) {
+                if (!seen.add(b.bookId())) {
+                    throw new IllegalArgumentException("book " + b.bookId() + " appears twice in the rebuild");
+                }
+                chunk.add(b);
+                if (chunk.size() == REBUILD_CHUNK) {
+                    insertBooksAndPostings(chunk, indexedAt).forEach((t, n) -> df.merge(t, n, Integer::sum));
+                    count[0] += chunk.size();
+                    chunk.clear();
+                }
+            }
+            insertBooksAndPostings(chunk, indexedAt).forEach((t, n) -> df.merge(t, n, Integer::sum));
+            count[0] += chunk.size();
+            try (PreparedStatement insert = connection.prepareStatement(INSERT_TERM)) {
+                addTerms(insert, df);
+            }
+            try (Statement s = connection.createStatement()) {
+                for (String sql : schema) {
+                    if (sql.startsWith("CREATE INDEX")) {
+                        s.execute(sql);
+                    }
+                }
+            }
         });
         return count[0];
     }
@@ -192,40 +264,70 @@ public final class Datamart implements AutoCloseable {
         return Instant.now(clock).truncatedTo(ChronoUnit.SECONDS).toString();
     }
 
-    /** Body of a write transaction; returns how many books were written. */
-    private int writeBooks(Iterable<IndexedBook> books, String indexedAt) throws SQLException {
-        int written = 0;
+    /** Takes the previous version of these books out of postings and df (inside a transaction). */
+    private void removePrevious(Collection<Long> bookIds) throws SQLException {
         try (PreparedStatement decrement = connection.prepareStatement(DECREMENT_DF);
              PreparedStatement deleteTerms = connection.prepareStatement(DELETE_UNUSED_TERMS);
-             PreparedStatement deletePostings = connection.prepareStatement(DELETE_POSTINGS);
-             PreparedStatement insertBook = connection.prepareStatement(INSERT_BOOK);
-             PreparedStatement insertPosting = connection.prepareStatement(INSERT_POSTING);
-             PreparedStatement incrementDf = connection.prepareStatement(INCREMENT_DF)) {
-            for (IndexedBook book : books) {
-                // 1. remove the previous version, if any (re-indexing must not duplicate)
+             PreparedStatement deletePostings = connection.prepareStatement(DELETE_POSTINGS)) {
+            for (long id : bookIds) {
                 for (PreparedStatement p : List.of(decrement, deleteTerms, deletePostings)) {
-                    p.setLong(1, book.bookId());
+                    p.setLong(1, id);
                     p.executeUpdate();
                 }
-                // 2. metadata row
-                bindBook(insertBook, book, indexedAt);
-                insertBook.executeUpdate();
-                // 3. postings and df, one row per distinct term
-                for (Map.Entry<String, int[]> e : book.postings().entrySet()) {
-                    insertPosting.setString(1, e.getKey());
-                    insertPosting.setLong(2, book.bookId());
-                    insertPosting.setInt(3, e.getValue().length);
-                    insertPosting.setString(4, CanonicalExport.csv(e.getValue()));
-                    insertPosting.addBatch();
-                    incrementDf.setString(1, e.getKey());
-                    incrementDf.addBatch();
-                }
-                insertPosting.executeBatch();
-                incrementDf.executeBatch();
-                written++;
             }
         }
-        return written;
+    }
+
+    /**
+     * Inserts the metadata rows and the postings of {@code books} (inside a transaction; their
+     * previous versions must already be gone). Postings of all the books are inserted in
+     * (term, book_id) order, the order of the table's B-tree.
+     *
+     * @return for each term, how many of these books contain it (the df increment)
+     */
+    private Map<String, Integer> insertBooksAndPostings(Collection<IndexedBook> books, String indexedAt)
+            throws SQLException {
+        Map<String, Integer> df = new HashMap<>();
+        List<Object[]> rows = new ArrayList<>();
+        try (PreparedStatement insertBook = connection.prepareStatement(INSERT_BOOK)) {
+            for (IndexedBook b : books) {
+                bindBook(insertBook, b, indexedAt);
+                insertBook.addBatch();
+                for (Map.Entry<String, int[]> e : b.postings().entrySet()) {
+                    rows.add(new Object[] {e.getKey(), b.bookId(), e.getValue()});
+                    df.merge(e.getKey(), 1, Integer::sum);
+                }
+            }
+            insertBook.executeBatch();
+        }
+        rows.sort((x, y) -> {
+            int c = CanonicalExport.UTF8_ORDER.compare((String) x[0], (String) y[0]);
+            return c != 0 ? c : Long.compare((Long) x[1], (Long) y[1]);
+        });
+        try (PreparedStatement insertPosting = connection.prepareStatement(INSERT_POSTING)) {
+            for (Object[] r : rows) {
+                int[] positions = (int[]) r[2];
+                insertPosting.setString(1, (String) r[0]);
+                insertPosting.setLong(2, (Long) r[1]);
+                insertPosting.setInt(3, positions.length);
+                insertPosting.setString(4, CanonicalExport.csv(positions));
+                insertPosting.addBatch();
+            }
+            insertPosting.executeBatch();
+        }
+        return df;
+    }
+
+    /** Writes df values in term order with {@code statement} (INSERT_TERM or ADD_DF). */
+    private static void addTerms(PreparedStatement statement, Map<String, Integer> df) throws SQLException {
+        List<String> terms = new ArrayList<>(df.keySet());
+        terms.sort(CanonicalExport.UTF8_ORDER);
+        for (String t : terms) {
+            statement.setString(1, t);
+            statement.setInt(2, df.get(t));
+            statement.addBatch();
+        }
+        statement.executeBatch();
     }
 
     private static void bindBook(PreparedStatement p, IndexedBook b, String indexedAt) throws SQLException {

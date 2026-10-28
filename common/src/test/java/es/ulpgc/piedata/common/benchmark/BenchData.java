@@ -38,7 +38,8 @@ public final class BenchData {
             return golden;
         }
         ReceiptStore receipts = new ReceiptStore(dir);
-        List<Long> ids = receipts.ids();
+        List<Long> golden20 = GoldenBooks.ids();
+        List<Long> ids = receipts.ids().stream().filter(id -> !golden20.contains(id)).toList();
         BookIndexer indexer = BookIndexer.standard();
         return () -> new Iterator<>() {
             private final Iterator<IndexedBook> first = golden.iterator();

@@ -100,11 +100,18 @@ COMMIT;
 - `df` is maintained **incrementally** (+1/−1 per book), never recomputed with `COUNT(*)`:
   recounting per book is quadratic in the corpus size (Stage 1 lesson, SPEC §6.3).
 - The `books.indexed` message is published only **after** `COMMIT` returns (EVENTS.md §5).
-- `POST /index/rebuild` replaces the whole content **in one transaction** (delete all rows, then
-  write every ingested book): readers keep seeing the previous index until the commit, and a failed
-  rebuild changes nothing. The file is never replaced, because swapping a SQLite file in WAL mode
+- **Batches** (`Datamart.writeAll`, `IndexingService.updateAll`, used by the broker consumer):
+  several books in one transaction. The previous versions are removed first, then the postings of
+  the whole batch are inserted in `(term, book_id)` order (the table's key order) and each term's
+  `df` is updated once with `INSERT ... ON CONFLICT(term) DO UPDATE SET df = df + excluded.df`.
+  Per book this costs about half of one transaction per book.
+- `POST /index/rebuild` replaces the whole content **in one transaction**: readers keep seeing the
+  previous index until the commit, and a failed rebuild changes nothing. Fast path: the three
+  tables are dropped and recreated (no row-by-row deletes), books are written in chunks of 32 with
+  sorted postings, `df` is counted in memory and inserted once per term, and the secondary indexes
+  are created at the end. The file is never replaced, because swapping a SQLite file in WAL mode
   while other processes have it open would pair the new file with the old `-wal` file and corrupt
-  it. Cost: other writers wait during the rebuild (up to `busy_timeout`, then their message is
+  it. Other writers wait during the rebuild (up to `busy_timeout`, then their message is
   redelivered).
 
 ## 4. Reading (Search)

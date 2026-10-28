@@ -69,13 +69,13 @@ mvn -pl common test-compile exec:exec -Djmh.include=TokenizerBenchmark -Djmh.thr
 
 Results are written to `results/jmh/<module>.csv`.
 
-Indexing path (tokenize + parse, SQLite write with page cache 2 vs 256 MiB, 1/2/4/8 threads in
-one process):
+Indexing path (tokenize + parse; SQLite write: re-index vs new book, one transaction per book vs
+batches, page cache 2 vs 256 MiB; 1/2/4/8 threads in one process):
 
 ```bash
-bash scripts/bench-indexing.sh                                    # 20 golden books (~35 min)
+bash scripts/bench-indexing.sh                                    # 20 golden books (~1 h)
 bash scripts/prepare-bench-datalake.sh 1000                       # once: tier-1000 datalake from the mirror
-BENCH_DATADIR=~/bench/s2-tier1000 bash scripts/bench-indexing.sh  # + realistic index size (~1-2 h)
+BENCH_DATADIR=~/bench/s2-tier1000 bash scripts/bench-indexing.sh  # + realistic index size (~1 h 45)
 ```
 
 Results go to `results/jmh/<date>/` together with `host.txt` (machine specification). Run benchmarks on an idle machine and
