@@ -153,4 +153,18 @@ class IndexingAppTest {
         }
         assertEquals(TestWorkspace.expectedCanonicalSha256(), exportedSha256());
     }
+
+    @Test
+    void batchUpdateWritesAllOrNothing() throws Exception {
+        List<Long> ids = TestWorkspace.ingestGolden(dataDir);
+        List<Long> withUnknown = new ArrayList<>(ids.subList(0, 5));
+        withUnknown.add(1342L);                                       // not ingested
+        es.ulpgc.piedata.common.http.ApiException e = org.junit.jupiter.api.Assertions.assertThrows(
+                es.ulpgc.piedata.common.http.ApiException.class, () -> service.updateAll(withUnknown));
+        assertEquals(404, e.status());
+        assertEquals(0, json(call("GET", "/index/status")).get("books_indexed").getAsLong());
+
+        assertEquals(ids.size(), service.updateAll(ids));
+        assertEquals(TestWorkspace.expectedCanonicalSha256(), exportedSha256());
+    }
 }

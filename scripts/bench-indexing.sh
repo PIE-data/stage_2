@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Microbenchmarks of the indexing path (issue #4), brief section 6.3.
 #   common:            BookIndexerBenchmark (CPU only)
-#                      DatamartWriteBenchmark (SQLite write; page cache 2 vs 256 MiB)
-#   indexing-service:  IndexingThroughputBenchmark, 1/2/4/8 threads x cache 2/256 MiB
+#                      DatamartWriteBenchmark (re-index one book; page cache 2 vs 256 MiB)
+#                      DatamartInsertBenchmark (first indexing of one book)
+#                      DatamartBatchBenchmark (20 books: one transaction each vs one batch)
+#   indexing-service:  IndexingThroughputBenchmark (one book per call vs batches of 20), 1/2/4/8 threads
 #
 # Run on an idle machine, from the repository root:
-#   bash scripts/bench-indexing.sh                                  # 20 golden books only (~35 min)
-#   BENCH_DATADIR=~/bench/s2-tier1000 bash scripts/bench-indexing.sh  # + a real datalake (~1-2 h)
+#   bash scripts/bench-indexing.sh                                  # 20 golden books only (~1 h)
+#   BENCH_DATADIR=~/bench/s2-tier1000 bash scripts/bench-indexing.sh  # + a real datalake (~1 h 45)
 # (prepare the datalake with scripts/prepare-bench-datalake.sh; no spaces in the path)
 # Results: results/jmh/<date>/ (CSV per run + host.txt).
 set -euo pipefail
@@ -34,10 +36,11 @@ mvn -pl common test-compile exec:exec \
   -Djmh.include='BookIndexerBenchmark|DatamartWriteBenchmark' \
   -Djmh.output="$PWD/$OUT/common-golden20.csv"
 
-# 2. write cost on a datamart filled with the whole datalake
+# 2. write costs on a datamart filled with the whole datalake
 if [ -n "$DATADIR" ]; then
   mvn -pl common test-compile exec:exec \
-    -Djmh.include=DatamartWriteBenchmark -Dbench.datadir="$DATADIR" \
+    -Djmh.include='DatamartWriteBenchmark|DatamartInsertBenchmark|DatamartBatchBenchmark' \
+    -Dbench.datadir="$DATADIR" \
     -Djmh.output="$PWD/$OUT/common-datadir.csv"
 fi
 
