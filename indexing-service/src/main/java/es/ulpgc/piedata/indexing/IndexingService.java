@@ -69,16 +69,32 @@ public final class IndexingService implements AutoCloseable {
      */
     public UpdateResult update(long bookId) {
         long start = System.nanoTime();
-        Receipt receipt = receipts.read(bookId).orElseThrow(() ->
-                new ApiException(404, "not_ingested", "book " + bookId + " has no ingestion receipt"));
-        IndexedBook book = load(receipt);
+        IndexedBook book = load(bookId);
         try {
             datamart.write(book);
         } catch (SQLException e) {
             throw busy(e);
         }
-        int tokens = book.nTokens();
-        return new UpdateResult(bookId, book.postings().size(), tokens, (System.nanoTime() - start) / 1_000_000);
+        return new UpdateResult(bookId, book.postings().size(), book.nTokens(), (System.nanoTime() - start) / 1_000_000);
+    }
+
+    /**
+     * Indexes several ingested books and writes them in ONE transaction (all visible together, or
+     * none). The books are read and tokenized in parallel on the machine's cores; the write is a
+     * single batch, much cheaper per book than separate transactions (see DatamartWriteBenchmark).
+     * Used by the broker consumer to process several messages at once.
+     *
+     * @return the number of books written
+     * @throws ApiException as {@link #update(long)}; on any error nothing is written
+     */
+    public int updateAll(List<Long> bookIds) {
+        List<IndexedBook> books = loadAll(bookIds);
+        try {
+            datamart.writeAll(books);
+        } catch (SQLException e) {
+            throw busy(e);
+        }
+        return books.size();
     }
 
     /**
@@ -95,19 +111,24 @@ public final class IndexingService implements AutoCloseable {
         long start = System.nanoTime();
         try {
             List<Long> ids = receipts.ids();
+            // Read and tokenize chunk by chunk, each chunk in parallel; the datamart consumes them lazily.
             Iterable<IndexedBook> books = () -> new Iterator<>() {
                 private int next = 0;
+                private Iterator<IndexedBook> chunk = java.util.Collections.emptyIterator();
 
                 @Override
                 public boolean hasNext() {
-                    return next < ids.size();
+                    return chunk.hasNext() || next < ids.size();
                 }
 
                 @Override
                 public IndexedBook next() {
-                    long id = ids.get(next++);
-                    return load(receipts.read(id).orElseThrow(() -> new ApiException(409, "datalake_inconsistent",
-                            "receipt of book " + id + " disappeared during the rebuild")));
+                    if (!chunk.hasNext()) {
+                        int end = Math.min(next + LOAD_CHUNK, ids.size());
+                        chunk = loadAll(ids.subList(next, end)).iterator();
+                        next = end;
+                    }
+                    return chunk.next();
                 }
             };
             int processed = datamart.rebuild(books);
@@ -130,16 +151,26 @@ public final class IndexingService implements AutoCloseable {
         }
     }
 
+    /** Books read and tokenized together in parallel during a rebuild. */
+    static final int LOAD_CHUNK = 32;
+
     /** Reads header and body of an ingested book and indexes it (no datamart access). */
-    private IndexedBook load(Receipt r) {
+    private IndexedBook load(long bookId) {
+        Receipt receipt = receipts.read(bookId).orElseThrow(() ->
+                new ApiException(404, "not_ingested", "book " + bookId + " has no ingestion receipt"));
         try {
-            return indexer.index(dataDir, r);
+            return indexer.index(dataDir, receipt);
         } catch (NoSuchFileException e) {
             throw new ApiException(409, "datalake_inconsistent",
-                    "book " + r.bookId() + " has a receipt but its file is missing: " + e.getFile());
+                    "book " + bookId + " has a receipt but its file is missing: " + e.getFile());
         } catch (IOException e) {
-            throw new UncheckedIOException("cannot read book " + r.bookId(), e);
+            throw new UncheckedIOException("cannot read book " + bookId, e);
         }
+    }
+
+    /** {@link #load} for several books, in parallel on the common fork-join pool; order kept. */
+    private List<IndexedBook> loadAll(List<Long> bookIds) {
+        return bookIds.parallelStream().map(this::load).toList();
     }
 
     private static ApiException busy(SQLException e) {

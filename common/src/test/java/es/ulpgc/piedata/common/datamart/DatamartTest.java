@@ -187,4 +187,57 @@ class DatamartTest {
             assertTrue(d.contains(1));
         }
     }
+
+    @Test
+    void aBatchWithTheSameBookTwiceKeepsTheLastVersion(@TempDir Path dir) throws Exception {
+        try (Datamart d = Datamart.open(dir.resolve("datamart.db"))) {
+            d.writeAll(List.of(
+                    book(1, "First", postings("whale", new int[] {1})),
+                    book(2, "Other", postings("whale", new int[] {4})),
+                    book(1, "Second", postings("ship", new int[] {2}))));
+            assertEquals("{\"ship\":{\"df\":1,\"postings\":[[1,1,[2]]]},"
+                            + "\"whale\":{\"df\":1,\"postings\":[[2,1,[4]]]}}",
+                    new String(d.exportCanonical(), java.nio.charset.StandardCharsets.UTF_8));
+            assertEquals(0, d.inconsistentTerms());
+        }
+    }
+
+    @Test
+    void removeTakesTheBookOutCompletely(@TempDir Path dir) throws Exception {
+        List<IndexedBook> golden = GoldenBooks.all();
+        try (Datamart d = Datamart.open(dir.resolve("datamart.db"))) {
+            d.writeAll(golden);
+            d.remove(golden.get(5).bookId());
+            d.remove(999_999);                                // absent: nothing happens
+            List<IndexedBook> rest = new ArrayList<>(golden);
+            rest.remove(5);
+            assertArrayEquals(CanonicalExport.of(rest), d.exportCanonical());
+            assertFalse(d.contains(golden.get(5).bookId()));
+            assertEquals(0, d.inconsistentTerms());
+        }
+    }
+
+    @Test
+    void rebuildRejectsDuplicatesAndKeepsTheOldIndex(@TempDir Path dir) throws Exception {
+        try (Datamart d = Datamart.open(dir.resolve("datamart.db"))) {
+            d.writeAll(GoldenBooks.all());
+            List<IndexedBook> twice = List.of(GoldenBooks.all().get(0), GoldenBooks.all().get(0));
+            assertThrows(IllegalArgumentException.class, () -> d.rebuild(twice));
+            assertEquals(GoldenBooks.expectedCanonicalSha256(), sha256(d.exportCanonical()));
+        }
+    }
+
+    @Test
+    void rebuildRecreatesTheSecondaryIndexes(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("datamart.db");
+        try (Datamart d = Datamart.open(file)) {
+            d.rebuild(GoldenBooks.all());
+        }
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + file);
+             Statement s = c.createStatement();
+             ResultSet r = s.executeQuery("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'")) {
+            r.next();
+            assertEquals(4, r.getInt(1));
+        }
+    }
 }
