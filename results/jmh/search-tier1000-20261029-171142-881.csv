@@ -1,0 +1,4 @@
+"Benchmark","Mode","Threads","Samples","Score","Score Error (99,9%)","Unit","Param: dataDir","Param: workload"
+"es.ulpgc.piedata.search.benchmark.SearchBenchmark.search","avgt",1,10,"4,428038","0,719400","ms/op","C:\Users\Ivan\Desktop\UNIVERSITY\1.1. ERASMUS\ERASMUS MAGISTRALE\3. Esami\BIG DATA\Group Work\BigDataDatasets\s2-tier1000",single
+"es.ulpgc.piedata.search.benchmark.SearchBenchmark.search","avgt",1,10,"5,260305","0,628057","ms/op","C:\Users\Ivan\Desktop\UNIVERSITY\1.1. ERASMUS\ERASMUS MAGISTRALE\3. Esami\BIG DATA\Group Work\BigDataDatasets\s2-tier1000",multi
+"es.ulpgc.piedata.search.benchmark.SearchBenchmark.search","avgt",1,10,"3,404943","0,281035","ms/op","C:\Users\Ivan\Desktop\UNIVERSITY\1.1. ERASMUS\ERASMUS MAGISTRALE\3. Esami\BIG DATA\Group Work\BigDataDatasets\s2-tier1000",filtered
