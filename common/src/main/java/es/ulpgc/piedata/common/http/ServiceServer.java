@@ -4,6 +4,7 @@ import es.ulpgc.piedata.common.config.AppConfig;
 import es.ulpgc.piedata.common.json.Json;
 import io.javalin.Javalin;
 import io.javalin.http.HttpResponseException;
+import io.javalin.config.JavalinConfig;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Builds the HTTP server of a service with the conventions shared by all services:
@@ -32,7 +34,20 @@ public final class ServiceServer {
     private ServiceServer() {
     }
 
+    @FunctionalInterface
+    public interface StatusDetails {
+        Map<String, Object> read() throws Exception;
+    }
+
     public static Javalin create(AppConfig config) {
+        return create(config, configuration -> {}, Map::of);
+    }
+
+    public static Javalin create(
+            AppConfig config,
+            Consumer<JavalinConfig> configure,
+            StatusDetails statusDetails
+    ) {
         String service = config.get("service.name");
         int minThreads = config.getInt("server.threads.min");
         int maxThreads = config.getInt("server.threads.max");
@@ -42,6 +57,7 @@ public final class ServiceServer {
             c.http.defaultContentType = "application/json";
             c.showJavalinBanner = false;
             c.jetty.threadPool = new QueuedThreadPool(maxThreads, minThreads);
+            configure.accept(c);
         });
 
         app.get("/status", ctx -> {
@@ -52,6 +68,7 @@ public final class ServiceServer {
             body.put("threads_min", minThreads);
             body.put("threads_max", maxThreads);
             body.put("uptime_s", Duration.between(startedAt, Instant.now()).toSeconds());
+            body.putAll(statusDetails.read());
             ctx.result(Json.write(body));
         });
 

@@ -3,14 +3,17 @@
 Service-oriented version of the Stage 1 data layer: independent Java services that cooperate
 through an ActiveMQ message broker and REST APIs, all running on one machine.
 
-> Status: **foundation done** (issue #1): skeleton, contracts, Java tokenizer, JMH setup.
-> Every service starts and answers `GET /status`; the real endpoints are added in issues #2–#5.
+> Foundation implemented: Maven modules, shared contracts, Java tokenizer and JMH setup.
+> Search provides a read-only API with automated tests and tier-1000 benchmarks.
+> Full-system deployment and integration validation are tracked separately in issues #7–#8.
 
 ## Design documents
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — components, diagram, life of a book, replicas and threads
 - [docs/DATAMART.md](docs/DATAMART.md) — SQLite schema shared by Indexing (writer) and Search (reader)
 - [docs/EVENTS.md](docs/EVENTS.md) — broker queues, message formats, acknowledgements and retries
+- - [docs/SEARCH_SERVICE.md](docs/SEARCH_SERVICE.md) — Search API, front-end use cases, consistency and configuration
+- [docs/SEARCH_BENCHMARK.md](docs/SEARCH_BENCHMARK.md) — tier-1000 JMH workloads, reproduction steps and results
 
 ## Stage 1 reference files
 
@@ -91,6 +94,27 @@ record its specification together with the results.
 
 Errors: `400 invalid_book_id`, `404 not_ingested` (no receipt), `409 datalake_inconsistent`
 (receipt without file), `409 rebuild_in_progress`, `503 datamart_busy` (retry later).
+
+## Search service API
+
+| Method and route | Purpose |
+|---|---|
+| `GET /search?q=sea` | Keyword search with optional author, language, year and pagination parameters |
+| `GET /books/{book_id}` | Metadata for an indexed book |
+| `GET /search/filters` | Available languages and release-year range |
+| `GET /status` | Service status and datamart readiness |
+
+Search uses AND semantics for multiple normalized terms and ranks matches
+by TF-IDF, with book ID as the tie-breaker. Database access is read-only,
+with one read transaction per request.
+
+Default configuration: port 7003, Jetty thread pool minimum 8 / maximum 250.
+See [Search documentation](docs/SEARCH_SERVICE.md) for configuration,
+response semantics and front-end use cases.
+
+The dedicated Search JMH runner produces timestamped files under `results/jmh/`.
+Its setup and results are described in
+[Search benchmarks](docs/SEARCH_BENCHMARK.md).
 
 ## Configuration
 
