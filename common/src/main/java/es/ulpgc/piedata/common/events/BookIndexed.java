@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
-public record BookIndexed(String event, long bookId, String indexedAt) {
+public record BookIndexed(String event, long book_id, String indexed_at) {
 
     public static final String EVENT_NAME = "BookIndexed";
 
