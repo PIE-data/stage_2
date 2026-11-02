@@ -1,0 +1,761 @@
+openapi: 3.1.0
+
+info:
+  title: PIE-data Search Engine API
+  version: 0.1.0
+  description: >
+    API specification for the PIE-data Stage 2 search engine.
+    This version documents the HTTP endpoints currently implemented
+    in the Search and Indexing services, together with the common
+    service status endpoint.
+
+tags:
+  - name: Search
+    description: Front-end-facing search operations.
+
+  - name: Indexing
+    description: Internal and administrative indexing operations.
+
+  - name: Operational
+    description: Health and service status operations.
+
+paths:
+  /search:
+    get:
+      tags:
+        - Search
+      summary: Search books
+      description: >
+        Searches indexed books using query text and optional metadata filters.
+        Multiple normalized query terms use AND semantics, so a book must match
+        all query terms. Results are ordered by score descending and then by
+        book_id ascending. Each query parameter may be specified at most once.
+
+      servers:
+        - url: http://localhost:7003
+          description: Search Service
+
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: >
+            Search text. The text is normalized and tokenized before searching.
+            If all terms are discarded during tokenization, the request still
+            returns 200 with an empty results list.
+          schema:
+            type: string
+          example: sea ship
+
+        - name: author
+          in: query
+          required: false
+          description: >
+            Optional author filter. Matching is case-insensitive and checks
+            whether the supplied value occurs inside the stored author name.
+            A blank value is treated as no filter.
+          schema:
+            type: string
+          example: melville
+
+        - name: language
+          in: query
+          required: false
+          description: >
+            Optional lowercase ISO 639-1 language code, for example en or es.
+            A blank value is treated as no filter.
+          schema:
+            type: string
+            pattern: "^[a-z]{2}$"
+          example: en
+
+        - name: year
+          in: query
+          required: false
+          description: >
+            Optional four-digit Project Gutenberg release year.
+            This is the Gutenberg e-book release year, not the original
+            publication year of the work.
+          schema:
+            type: string
+            pattern: "^[0-9]{4}$"
+          example: "2001"
+
+        - name: offset
+          in: query
+          required: false
+          description: Number of matching results to skip before returning the page.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results returned in one page.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+
+      responses:
+        "200":
+          description: Search completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+              example:
+                query: sea
+                filters:
+                  language: en
+                total: 2
+                offset: 0
+                limit: 20
+                results:
+                  - book_id: 1001
+                    title: Sample Book A
+                    author: Example Author
+                    language: en
+                    year: 2001
+                    score: 4.27
+                  - book_id: 1002
+                    title: Sample Book B
+                    author: Another Author
+                    language: en
+                    year: 2004
+                    score: 3.91
+
+        "400":
+          description: One or more search parameters are invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error: invalid_parameter
+                message: limit must be between 1 and 100
+
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /search/filters:
+    get:
+      tags:
+        - Search
+      summary: Get available search filters
+      description: >
+        Returns the languages and Project Gutenberg release-year range
+        currently available in the indexed data.
+
+      servers:
+        - url: http://localhost:7003
+          description: Search Service
+
+      responses:
+        "200":
+          description: Filter choices returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FilterChoices"
+              example:
+                languages:
+                  - en
+                  - es
+                year_range:
+                  min: 1994
+                  max: 2023
+
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /books/{book_id}:
+    get:
+      tags:
+        - Search
+      summary: Get book details
+      description: Returns metadata for one indexed book.
+
+      servers:
+        - url: http://localhost:7003
+          description: Search Service
+
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          description: Positive Project Gutenberg book identifier.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1342
+
+      responses:
+        "200":
+          description: Book found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookDetails"
+
+        "400":
+          description: Invalid book identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error: invalid_book_id
+                message: book_id must be a positive integer
+
+        "404":
+          description: Book identifier is valid but the book is not indexed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error: not_found
+                message: book 1342 was not found
+
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /index/update/{book_id}:
+    post:
+      tags:
+        - Indexing
+      summary: Index or re-index one book
+      description: >
+        Reads an already ingested book from the datalake and updates its
+        metadata and inverted-index entries in the datamart.
+        The operation is idempotent: repeating it for the same book replaces
+        its existing index data rather than creating duplicates.
+        A successful 200 response means the update has already been committed
+        to the datamart.
+
+      servers:
+        - url: http://localhost:7002
+          description: Indexing Service
+
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          description: Positive Project Gutenberg book identifier.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1342
+
+      responses:
+        "200":
+          description: Book indexing completed and committed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexUpdateResponse"
+
+        "400":
+          description: Invalid book identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error: invalid_book_id
+                message: book_id must be a positive integer
+
+        "404":
+          description: The book has not been ingested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error: not_ingested
+                message: book 1342 has no ingestion receipt
+
+        "409":
+          description: >
+            The ingestion receipt exists but the corresponding datalake files
+            are inconsistent or missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error: datalake_inconsistent
+                message: book has a receipt but one of its files is missing
+
+        "503":
+          description: >
+            The datamart is temporarily unavailable or locked.
+            The caller may retry the operation later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error: datamart_busy
+                message: datamart unavailable, retry later
+
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /index/rebuild:
+    post:
+      tags:
+        - Indexing
+      summary: Rebuild the complete datamart
+      description: >
+        Rebuilds metadata and the inverted index from all available ingestion
+        receipts. The rebuild is performed atomically, so Search continues to
+        see the previous committed index until the rebuild completes.
+        A successful 200 response means the rebuild has completed.
+
+      servers:
+        - url: http://localhost:7002
+          description: Indexing Service
+
+      responses:
+        "200":
+          description: Rebuild completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexRebuildResponse"
+
+        "409":
+          description: >
+            A rebuild is already running or the datalake is inconsistent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                rebuildAlreadyRunning:
+                  value:
+                    error: rebuild_in_progress
+                    message: a rebuild is already running
+                inconsistentDatalake:
+                  value:
+                    error: datalake_inconsistent
+                    message: an ingestion receipt points to a missing file
+
+        "503":
+          description: >
+            The datamart is temporarily unavailable or locked.
+            The caller may retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error: datamart_busy
+                message: datamart unavailable, retry later
+
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /index/status:
+    get:
+      tags:
+        - Indexing
+      summary: Get indexing statistics
+      description: Returns the current state and size of the datamart.
+
+      servers:
+        - url: http://localhost:7002
+          description: Indexing Service
+
+      responses:
+        "200":
+          description: Indexing status returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexStatusResponse"
+
+        "503":
+          description: Datamart is temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /status:
+    get:
+      tags:
+        - Operational
+      summary: Get service health status
+      description: >
+        Common health endpoint exposed by every HTTP service.
+        Search additionally reports datamart readiness and the number
+        of indexed books.
+
+      servers:
+        - url: http://localhost:7001
+          description: Ingestion Service
+        - url: http://localhost:7002
+          description: Indexing Service
+        - url: http://localhost:7003
+          description: Search Service
+        - url: http://localhost:7004
+          description: Feeder
+
+      responses:
+        "200":
+          description: Service is running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceStatus"
+              example:
+                service: search
+                status: running
+                port: 7003
+                threads_min: 8
+                threads_max: 250
+                uptime_s: 120
+                datamart: ready
+                books_indexed: 1000
+
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+components:
+  schemas:
+    ApiError:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable explanation of the error.
+
+    SearchFilters:
+      type: object
+      additionalProperties: false
+      properties:
+        author:
+          type: string
+        language:
+          type: string
+        year:
+          type: integer
+
+    SearchResponse:
+      type: object
+      required:
+        - query
+        - filters
+        - total
+        - offset
+        - limit
+        - results
+      properties:
+        query:
+          type: string
+          description: Original query supplied by the caller.
+
+        filters:
+          $ref: "#/components/schemas/SearchFilters"
+
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of matches before pagination.
+
+        offset:
+          type: integer
+          minimum: 0
+
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookHit"
+
+    BookHit:
+      type: object
+      required:
+        - book_id
+        - title
+        - author
+        - language
+        - year
+        - score
+      properties:
+        book_id:
+          type: integer
+          format: int64
+
+        title:
+          type: string
+
+        author:
+          type:
+            - string
+            - "null"
+
+        language:
+          type:
+            - string
+            - "null"
+
+        year:
+          type:
+            - integer
+            - "null"
+
+        score:
+          type: number
+          format: double
+          description: TF-IDF score used for result ordering.
+
+    BookDetails:
+      type: object
+      required:
+        - book_id
+        - title
+        - author
+        - language
+        - year
+      properties:
+        book_id:
+          type: integer
+          format: int64
+
+        title:
+          type: string
+
+        author:
+          type:
+            - string
+            - "null"
+
+        language:
+          type:
+            - string
+            - "null"
+
+        year:
+          type:
+            - integer
+            - "null"
+          description: Project Gutenberg release year.
+
+    YearRange:
+      type: object
+      required:
+        - min
+        - max
+      properties:
+        min:
+          type:
+            - integer
+            - "null"
+
+        max:
+          type:
+            - integer
+            - "null"
+
+    FilterChoices:
+      type: object
+      required:
+        - languages
+        - year_range
+      properties:
+        languages:
+          type: array
+          items:
+            type: string
+
+        year_range:
+          $ref: "#/components/schemas/YearRange"
+
+    IndexUpdateResponse:
+      type: object
+      required:
+        - book_id
+        - index
+        - distinct_terms
+        - tokens
+        - elapsed_ms
+      properties:
+        book_id:
+          type: integer
+          format: int64
+
+        index:
+          type: string
+          enum:
+            - updated
+
+        distinct_terms:
+          type: integer
+          minimum: 0
+
+        tokens:
+          type: integer
+          minimum: 0
+
+        elapsed_ms:
+          type: integer
+          format: int64
+          minimum: 0
+
+    IndexRebuildResponse:
+      type: object
+      required:
+        - books_processed
+        - elapsed_time
+        - elapsed_ms
+      properties:
+        books_processed:
+          type: integer
+          minimum: 0
+
+        elapsed_time:
+          type: string
+          description: Human-readable elapsed time, for example 35.2s.
+
+        elapsed_ms:
+          type: integer
+          format: int64
+          minimum: 0
+
+    IndexStatusResponse:
+      type: object
+      required:
+        - books_indexed
+        - terms
+        - postings
+        - last_update
+        - index_size_MB
+        - rebuild_in_progress
+      properties:
+        books_indexed:
+          type: integer
+          format: int64
+          minimum: 0
+
+        terms:
+          type: integer
+          format: int64
+          minimum: 0
+
+        postings:
+          type: integer
+          format: int64
+          minimum: 0
+
+        last_update:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+        index_size_MB:
+          type: number
+          format: double
+          minimum: 0
+
+        rebuild_in_progress:
+          type: boolean
+
+    ServiceStatus:
+      type: object
+      required:
+        - service
+        - status
+        - port
+        - threads_min
+        - threads_max
+        - uptime_s
+      properties:
+        service:
+          type: string
+
+        status:
+          type: string
+          enum:
+            - running
+
+        port:
+          type: integer
+
+        threads_min:
+          type: integer
+          minimum: 1
+
+        threads_max:
+          type: integer
+          minimum: 1
+
+        uptime_s:
+          type: integer
+          format: int64
+          minimum: 0
+
+        datamart:
+          type: string
+          enum:
+            - empty
+            - ready
+          description: Present on the Search Service status response.
+
+        books_indexed:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Present on the Search Service status response.
