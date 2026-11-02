@@ -99,10 +99,13 @@ public final class TransactedConsumer implements AutoCloseable {
     @Override
     public synchronized void close() {
         running.set(false);
-        executor.shutdownNow();
+        executor.shutdown();
         try {
-            executor.awaitTermination(3, TimeUnit.SECONDS);
+            if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
         } catch (InterruptedException ignored) {
+            executor.shutdownNow();
             Thread.currentThread().interrupt();
         }
     }

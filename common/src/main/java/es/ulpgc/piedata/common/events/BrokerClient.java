@@ -16,7 +16,7 @@ public final class BrokerClient implements AutoCloseable{
         this(rawBrokerUrl, 1000L, 5);
     }
 
-    public BrokerClient(String rawBrokerUrl, long initialRedeliveryDelay, int maxRedeliveries) {
+    public BrokerClient(String rawBrokerUrl, long initialRedeliveryDelayMs, int maxRedeliveries) {
         String brokerUrl = formatFailoverUrl(rawBrokerUrl);
         this.factory = new ActiveMQConnectionFactory(brokerUrl);
 
@@ -27,7 +27,8 @@ public final class BrokerClient implements AutoCloseable{
 
         RedeliveryPolicy redelivery = new RedeliveryPolicy();
         redelivery.setMaximumRedeliveries(maxRedeliveries);
-        redelivery.setInitialRedeliveryDelay(initialRedeliveryDelay);
+        redelivery.setInitialRedeliveryDelay(initialRedeliveryDelayMs);
+        redelivery.setRedeliveryDelay(initialRedeliveryDelayMs);
         redelivery.setBackOffMultiplier(2.0);
         redelivery.setUseExponentialBackOff(true);
         this.factory.setRedeliveryPolicy(redelivery);
@@ -41,7 +42,13 @@ public final class BrokerClient implements AutoCloseable{
     }
 
     public synchronized Connection getConnection() throws JMSException {
-        if (connection == null) {
+        if (connection == null || ((ActiveMQConnection) connection).isClosed() || ((ActiveMQConnection) connection).isTransportFailed()) {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (Exception ignored) {
+                }
+            }
             connection = factory.createConnection();
             connection.start();
         }

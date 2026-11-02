@@ -1,16 +1,12 @@
 package es.ulpgc.piedata.broker;
 
-import org.apache.activemq.RedeliveryPolicy;
-import org.apache.activemq.broker.BrokerPlugin;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.broker.region.Destination;
 import org.apache.activemq.broker.region.DestinationStatistics;
 import org.apache.activemq.broker.region.Queue;
 import org.apache.activemq.broker.region.policy.PolicyEntry;
 import org.apache.activemq.broker.region.policy.PolicyMap;
-import org.apache.activemq.broker.region.policy.RedeliveryPolicyMap;
 import org.apache.activemq.broker.region.policy.SharedDeadLetterStrategy;
-import org.apache.activemq.broker.util.RedeliveryPlugin;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.activemq.store.kahadb.KahaDBPersistenceAdapter;
 import org.slf4j.Logger;
@@ -54,17 +50,6 @@ public final class EmbeddedBroker implements AutoCloseable {
         defaultEntry.setEnableAudit(true);
         policyMap.setDefaultEntry(defaultEntry);
         broker.setDestinationPolicy(policyMap);
-
-        RedeliveryPlugin redeliveryPlugin = new RedeliveryPlugin();
-        RedeliveryPolicyMap redeliveryPolicyMap = new RedeliveryPolicyMap();
-        RedeliveryPolicy redeliveryPolicy = new RedeliveryPolicy();
-        redeliveryPolicy.setMaximumRedeliveries(maxRedeliveries);
-        redeliveryPolicy.setInitialRedeliveryDelay(initialRedeliveryDelayMs);
-        redeliveryPolicy.setBackOffMultiplier(2.0);
-        redeliveryPolicy.setUseExponentialBackOff(true);
-        redeliveryPolicyMap.setDefaultEntry(redeliveryPolicy);
-        redeliveryPlugin.setRedeliveryPolicyMap(redeliveryPolicyMap);
-        broker.setPlugins(new BrokerPlugin[]{redeliveryPlugin});
 
         broker.addConnector("tcp://0.0.0.0:" + port);
     }
