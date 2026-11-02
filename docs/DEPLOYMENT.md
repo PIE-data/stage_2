@@ -123,7 +123,12 @@ continued searches after stopping one Search replica with Ctrl+C, and
 reintegration after restarting it. Those tests are separate from the
 scripted lifecycle check.
 
-Pending acceptance: startup-failure rollback and port-collision checks
-on WSL, full messaging integration, tier-100 completion with two replicas
-per service including abrupt replica failure, and golden quick-run
-integration. Existing 20 golden inputs remain in `spec/golden`.
+Additional manual WSL checks passed on 2026-11-02: duplicate-start
+rejection without disrupting existing services, occupied-port rejection
+without affecting the external listener, and cleanup after an intentional
+failure of the second Search replica. Evidence and observations are in
+`results/deployment/startup-checks-20261102/`.
+
+Pending acceptance: full messaging integration, tier-100 completion with
+two replicas per service including abrupt replica failure, and golden
+quick-run integration. Existing 20 golden inputs remain in `spec/golden`.
