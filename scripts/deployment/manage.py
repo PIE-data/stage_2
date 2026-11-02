@@ -112,7 +112,7 @@ def start(c, args, registry, rows):
     step = integer(c, 'PORT_STEP')
     plan = []
     if args.mode == 'full':
-        plan.append(('broker', 'broker', integer(c, 'BROKER_PORT'), None))
+        plan.append(('broker', 'broker', integer(c, 'BROKER_HTTP_PORT'), 'broker'))
         for name in ('ingestion', 'indexing'):
             for i in range(integer(c, name.upper()+'_REPLICAS', high=100)):
                 plan.append((f'{name}-{i+1}', name+'-service',
@@ -123,6 +123,8 @@ def start(c, args, registry, rows):
         plan.append(('feeder', 'feeder', integer(c, 'FEEDER_PORT'), 'feeder'))
     gateway = integer(c, 'GATEWAY_PORT')
     ports = [p[2] for p in plan] + [gateway]
+    if args.mode == 'full':
+        ports.append(integer(c, 'BROKER_PORT'))
     if len(set(ports)) != len(ports) or any(p > 65535 for p in ports):
         raise ValueError('Port collision or port outside 1..65535')
     for port in ports:
@@ -170,6 +172,8 @@ def start(c, args, registry, rows):
             command += ['-jar', str(ROOT/module/'target'/f'{module}.jar')]
             row = launch(name, command)
             wait_ready(row, port, timeout, service)
+            if name == 'broker':
+                wait_ready(row, integer(c, 'BROKER_PORT'), timeout)
             print(f'Ready: {name} port={port} pid={row["pid"]}', flush=True)
         prefix = runtime/'nginx'
         row = launch('gateway', [nginx, '-p', str(prefix)+'/', '-c', 'nginx.conf', '-g', 'daemon off;'])
