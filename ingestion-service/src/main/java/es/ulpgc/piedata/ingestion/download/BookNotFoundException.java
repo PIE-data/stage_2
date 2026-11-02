@@ -1,4 +1,4 @@
-package es.ulpgc.piedata.ingestion;
+package es.ulpgc.piedata.ingestion.download;
 
 public class BookNotFoundException extends RuntimeException {
 

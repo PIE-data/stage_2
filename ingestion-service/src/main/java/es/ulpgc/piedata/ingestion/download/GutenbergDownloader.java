@@ -1,4 +1,4 @@
-package es.ulpgc.piedata.ingestion;
+package es.ulpgc.piedata.ingestion.download;
 
 import java.io.IOException;
 import java.net.URI;

@@ -1,5 +1,8 @@
 package es.ulpgc.piedata.ingestion;
 
+import es.ulpgc.piedata.ingestion.split.BookSplitter;
+import es.ulpgc.piedata.ingestion.split.MarkersNotFoundException;
+import es.ulpgc.piedata.ingestion.split.SplitResult;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;

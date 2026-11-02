@@ -1,4 +1,4 @@
-package es.ulpgc.piedata.ingestion;
+package es.ulpgc.piedata.ingestion.split;
 
 import java.util.regex.Pattern;
 

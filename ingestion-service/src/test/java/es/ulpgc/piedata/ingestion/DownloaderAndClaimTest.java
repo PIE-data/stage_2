@@ -1,5 +1,8 @@
 package es.ulpgc.piedata.ingestion;
 
+import es.ulpgc.piedata.ingestion.download.BookNotFoundException;
+import es.ulpgc.piedata.ingestion.download.GutenbergDownloader;
+import es.ulpgc.piedata.ingestion.storage.BookClaim;
 import io.javalin.Javalin;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
