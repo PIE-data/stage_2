@@ -1,0 +1,9 @@
+broker 2615 running
+ingestion-1 2657 running
+ingestion-2 2716 running
+indexing-1 2770 running
+indexing-2 2821 stopped
+search-1 2872 running
+search-2 2913 running
+feeder 2954 running
+gateway 3003 running

@@ -46,13 +46,32 @@ class LifecycleTests(unittest.TestCase):
             m.stop([dict(pid=123,start='old',boot=m.BOOT)],1)
             kill.assert_not_called()
 
-    def test_full_mode_fails_before_starting_skeletons(self):
+    def test_invalid_batch_settings_fail_before_launch(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
         with tempfile.TemporaryDirectory() as folder:
-            config=Path(folder)/'deployment.env'
-            config.write_text('RUN_DIR="'+folder+'/run"\n')
-            result=subprocess.run(['python3',str(HERE/'manage.py'),'run','--config',str(config)],capture_output=True,text=True)
-            self.assertNotEqual(result.returncode,0)
-            self.assertIn('Full mode blocked',result.stderr)
-            self.assertFalse((Path(folder)/'run/processes.json').exists())
+            registry = Path(folder) / 'run' / 'processes.json'
+            args = SimpleNamespace(mode='full', data_dir=None)
+            base_config = {
+                'DATA_DIR': str(Path(folder) / 'data'),
+                'HTTP_THREADS_MIN': '8',
+                'HTTP_THREADS_MAX': '64',
+                'STARTUP_TIMEOUT_SECONDS': '60',
+                'STOP_TIMEOUT_SECONDS': '30',
+                'INDEXING_BATCH_SIZE': '20',
+                'INDEXING_BATCH_WAIT_MS': '200',
+            }
+
+            for key in ('INDEXING_BATCH_SIZE', 'INDEXING_BATCH_WAIT_MS'):
+                for value in ('0', '-1', 'invalid'):
+                    with self.subTest(key=key, value=value):
+                        config = dict(base_config)
+                        config[key] = value
+                        with patch.object(m.subprocess, 'Popen') as launch:
+                            with self.assertRaisesRegex(ValueError, key):
+                                m.start(config, args, registry, [])
+                            launch.assert_not_called()
+                        self.assertFalse(registry.exists())
 
 if __name__=='__main__': unittest.main()

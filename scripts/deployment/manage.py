@@ -87,14 +87,6 @@ def wait_ready(row, port, timeout, service=None, host='127.0.0.1'):
 def start(c, args, registry, rows):
     if any(alive(r) for r in rows):
         raise RuntimeError('Managed processes are already running; stop them first')
-    if args.mode == 'full':
-        # Refuse a false full-system success against the supplied skeletons.
-        sources = [ROOT/'broker/src/main/java/es/ulpgc/piedata/broker/BrokerApp.java',
-                   ROOT/'feeder/src/main/java/es/ulpgc/piedata/feeder/FeederApp.java',
-                   ROOT/'ingestion-service/src/main/java/es/ulpgc/piedata/ingestion/IngestionApp.java']
-        if any('Skeleton' in p.read_text() or 'not implemented yet' in p.read_text() for p in sources):
-            raise RuntimeError('Full mode blocked: broker/feeder/ingestion are skeletons. Use --mode search. '
-                               'Revalidate messaging integration when implementations arrive.')
     data = Path(args.data_dir or c['DATA_DIR']).expanduser().resolve()
     runtime = registry.parent
     integer(c, 'HTTP_THREADS_MIN'); integer(c, 'HTTP_THREADS_MAX')
@@ -102,6 +94,9 @@ def start(c, args, registry, rows):
         raise ValueError('HTTP_THREADS_MAX must be >= HTTP_THREADS_MIN')
     timeout = integer(c, 'STARTUP_TIMEOUT_SECONDS')
     stop_timeout = integer(c, 'STOP_TIMEOUT_SECONDS')
+    if args.mode == 'full':
+        integer(c, 'INDEXING_BATCH_SIZE')
+        integer(c, 'INDEXING_BATCH_WAIT_MS')
     for key in ('JAVA_HEAP_MIN', 'JAVA_HEAP_MAX'):
         if not re.fullmatch(r'[1-9][0-9]*[kKmMgG]?', c[key]):
             raise ValueError(f'Invalid {key}')
@@ -167,6 +162,9 @@ def start(c, args, registry, rows):
                     'datamart.cache-mb': c['DATAMART_CACHE_MB']}
             if service in ('ingestion', 'indexing'):
                 opts['consumer.threads'] = c[service.upper()+'_CONSUMER_THREADS']
+            if service == 'indexing':
+                opts['consumer.batch-size'] = c['INDEXING_BATCH_SIZE']
+                opts['consumer.batch-wait-ms'] = c['INDEXING_BATCH_WAIT_MS']
             command = [java, '-Xms'+c['JAVA_HEAP_MIN'], '-Xmx'+c['JAVA_HEAP_MAX']]
             command += [f'-D{k}={v}' for k,v in opts.items()]
             command += ['-jar', str(ROOT/module/'target'/f'{module}.jar')]

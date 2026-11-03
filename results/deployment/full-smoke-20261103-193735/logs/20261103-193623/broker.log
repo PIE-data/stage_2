@@ -1,0 +1,34 @@
+[main] WARN org.apache.activemq.broker.BrokerService - Memory Usage for the Broker (1024mb) is more than the maximum available for the JVM: 512 mb - resetting to 70% of maximum available: 358
+[main] INFO org.apache.activemq.broker.BrokerService - Using Persistence Adapter: KahaDBPersistenceAdapter[/home/ivan/bench/s2-full-smoke.I8w1h4/data/broker]
+[main] INFO org.apache.activemq.broker.BrokerService - Starting Persistence Adapter: KahaDBPersistenceAdapter[/home/ivan/bench/s2-full-smoke.I8w1h4/data/broker]
+[main] INFO org.apache.activemq.store.kahadb.KahaDBStore - Starting KahaDBStore
+[main] INFO org.apache.activemq.store.kahadb.MessageDatabase - Opening MessageDatabase
+[main] INFO org.apache.activemq.broker.BrokerService - Starting Temp Data Store
+[main] INFO org.apache.activemq.store.kahadb.plist.PListStoreImpl - PListStore:[/home/ivan/bench/s2-full-smoke.I8w1h4/data/broker/pie-broker/tmp_storage] started
+[main] INFO org.apache.activemq.broker.BrokerService - Starting Job Scheduler Store
+[main] INFO org.apache.activemq.broker.BrokerService - Persistence Adapter successfully started
+[main] INFO org.apache.activemq.broker.BrokerService - Apache ActiveMQ 5.18.3 (pie-broker, ID:LAPTOP-73HL9M6J-41061-1793734584187-0:1) is starting
+[main] INFO org.apache.activemq.transport.TransportServerThreadSupport - Listening for connections at: tcp://LAPTOP-73HL9M6J:61616
+[main] INFO org.apache.activemq.broker.TransportConnector - Connector tcp://LAPTOP-73HL9M6J:61616 started
+[main] INFO org.apache.activemq.broker.BrokerService - Apache ActiveMQ 5.18.3 (pie-broker, ID:LAPTOP-73HL9M6J-41061-1793734584187-0:1) started
+[main] INFO org.apache.activemq.broker.BrokerService - For help or more information please see: http://activemq.apache.org
+[main] INFO es.ulpgc.piedata.broker.EmbeddedBroker - ActiveMQ broker started on tcp://0.0.0.0:61616 (KahaDB: /home/ivan/bench/s2-full-smoke.I8w1h4/data/broker)
+[main] INFO es.ulpgc.piedata.common.http.ServiceServer - broker configured: {broker.data-dir=/home/ivan/bench/s2-full-smoke.I8w1h4/data/broker, broker.port=61616, server.port=7000, server.threads.max=64, server.threads.min=8, service.name=broker}
+[main] INFO io.javalin.Javalin - Starting Javalin ...
+[main] INFO org.eclipse.jetty.server.Server - jetty-11.0.20; built: 2024-01-29T21:04:22.394Z; git: 922f8dc188f7011e60d0361de585fd4ac4d63064; jvm 17.0.20.1+1-1-24.04-Ubuntu
+[main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
+[main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@536dbea0{/,null,AVAILABLE}
+[main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@3ee37e5a{HTTP/1.1, (http/1.1)}{0.0.0.0:7000}
+[main] INFO org.eclipse.jetty.server.Server - Started Server@130c12b7{STARTING}[11.0.20,sto=0] @1694ms
+[main] INFO io.javalin.Javalin - Javalin started in 441ms \o/
+[main] INFO io.javalin.Javalin - Listening on http://localhost:7000/
+[main] INFO io.javalin.Javalin - You are running Javalin 6.1.3 (released March 2, 2024. Your Javalin version is 976 days old. Consider checking for a newer version.).
+[ActiveMQ ShutdownHook] INFO org.apache.activemq.broker.BrokerService - Apache ActiveMQ 5.18.3 (pie-broker, ID:LAPTOP-73HL9M6J-41061-1793734584187-0:1) is shutting down
+[ActiveMQ ShutdownHook] INFO org.apache.activemq.broker.TransportConnector - Connector tcp://LAPTOP-73HL9M6J:61616 stopped
+[ActiveMQ ShutdownHook] INFO org.apache.activemq.store.kahadb.plist.PListStoreImpl - PListStore:[/home/ivan/bench/s2-full-smoke.I8w1h4/data/broker/pie-broker/tmp_storage] stopped
+[ActiveMQ ShutdownHook] INFO org.apache.activemq.store.kahadb.KahaDBStore - Stopping async queue tasks
+[ActiveMQ ShutdownHook] INFO org.apache.activemq.store.kahadb.KahaDBStore - Stopping async topic tasks
+[ActiveMQ ShutdownHook] INFO org.apache.activemq.store.kahadb.KahaDBStore - Stopped KahaDB
+[Thread-4] INFO es.ulpgc.piedata.broker.EmbeddedBroker - ActiveMQ broker stopped
+[ActiveMQ ShutdownHook] INFO org.apache.activemq.broker.BrokerService - Apache ActiveMQ 5.18.3 (pie-broker, ID:LAPTOP-73HL9M6J-41061-1793734584187-0:1) uptime 6 minutes
+[ActiveMQ ShutdownHook] INFO org.apache.activemq.broker.BrokerService - Apache ActiveMQ 5.18.3 (pie-broker, ID:LAPTOP-73HL9M6J-41061-1793734584187-0:1) is shutdown

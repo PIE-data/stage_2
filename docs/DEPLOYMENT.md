@@ -1,4 +1,4 @@
-# Single-machine deployment (work in progress)
+# Single-machine deployment
 
 Requirements: Linux/WSL 2, Bash, Python 3 (standard library), Java 17,
 Maven 3.9+, nginx. Existing `config/deployment.env` and
@@ -22,19 +22,61 @@ Use the same config for start, status, monitoring and stop. `--data-dir`
 overrides the Java data workspace for that invocation only. A missing
 datamart is permitted by Search's contract; status then reports empty.
 
-The default run mode is `full`. With the supplied sources it fails before
-launching anything because broker, feeder and ingestion are skeletons.
-The full startup plan is broker, ingestion replicas, indexing replicas,
-search replicas, feeder and gateway. This plan is provisional until the
-messaging implementations are integrated and tested. It does not submit
-feeder requests automatically: the real feeder API is still absent.
-Neither a complete tier-100 run nor abrupt-kill recovery is claimed.
+## Full pipeline
+
+The default run mode is `full`. Startup order is broker, ingestion replicas,
+indexing replicas, search replicas, feeder and gateway. The default configuration
+starts two replicas each of Ingestion, Indexing and Search.
+
+After `mvn verify`, run from the repository root:
+
+```bash
+bash scripts/run-all.sh --mode full
+bash scripts/status-all.sh
+```
+
+The broker exposes messaging on port 61616 and HTTP status/statistics on
+port 7000. The gateway exposes Search on port 8080.
+
+Startup does not submit books automatically. To request up to 20 books:
+
+```bash
+curl --fail --max-time 60 -sS -X POST \
+  'http://127.0.0.1:7004/feeder/run?manifest=100&count=20'
+```
+
+`manifest=100` selects `spec/corpus/manifest_100.txt`. An explicit manifest
+path is also supported; its format is one numeric book ID per line.
+The feeder skips already-ingested books. Use a fresh data workspace and
+broker store for a reproducible end-to-end test.
+
+Inspect completion and queues with:
+
+```bash
+curl --fail -sS http://127.0.0.1:7004/feeder/status
+curl --fail -sS http://127.0.0.1:7002/index/status
+curl --fail -sS http://127.0.0.1:7000/broker/stats
+curl --fail -sS 'http://127.0.0.1:8080/search?q=sea&limit=3'
+```
+
+An accepted feeder request does not imply indexing has completed.
 
 ## Configuration and lifecycle
 
 All operational defaults come from `config/deployment.env`: ports, replica
 counts, port step, paths, executable names, JVM heap, HTTP and consumer
 threads, SQLite cache, gateway timeouts and monitor interval.
+
+Indexing batches are configured per consumer session:
+
+| Deployment variable | JVM property | Default |
+|---|---|---|
+| `INDEXING_BATCH_SIZE` | `consumer.batch-size` | 20 |
+| `INDEXING_BATCH_WAIT_MS` | `consumer.batch-wait-ms` | 200 ms |
+
+The deployment script validates both values as positive integers and passes
+them to every Indexing replica. Ingestion and Search do not receive these
+batch properties.
 
 Runtime files are outside the repository under RUN_DIR:
 
@@ -93,7 +135,8 @@ physical Windows host's total resource usage.
 
 Local checks passed: Python compilation, Bash syntax and five tests covering
 process identity, numeric validation, CSV creation, simulated shutdown,
-stale PID protection and refusal of full mode with the supplied skeletons.
+stale PID protection and rejection of invalid indexing batch settings before
+any process is launched.
 
 Run the tests with:
 
@@ -129,6 +172,95 @@ without affecting the external listener, and cleanup after an intentional
 failure of the second Search replica. Evidence and observations are in
 `results/deployment/startup-checks-20261102/`.
 
-Pending acceptance: full messaging integration, tier-100 completion with
-two replicas per service including abrupt replica failure, and golden
-quick-run integration. Existing 20 golden inputs remain in `spec/golden`.
+### Full pipeline verification — 2026-11-03
+
+Both runs used Ubuntu/WSL, fresh isolated data and broker directories,
+two replicas each of Ingestion, Indexing and Search, and indexing batches
+configured at 20 messages with a 200 ms wait.
+
+**20-book smoke test**
+
+- Requested, downloaded and indexed: 20; reported failures: 0.
+- All 20 book IDs were retrieved through the gateway.
+- Both Search upstreams were observed.
+- Searching for `sea` returned 15 matches.
+- Both work queues drained; the DLQ had zero depth and zero enqueues.
+- All managed services stopped and the deployment ports were released.
+
+Evidence: `results/deployment/full-smoke-20261103-193735/`.
+
+**100-book replica failure test**
+
+- Sent SIGKILL to `indexing-2` after observing 70 indexed books.
+- The remaining Indexing replica completed processing: 100 downloaded and
+  indexed books, with zero reported failures.
+- Both work queues drained; the DLQ had zero depth and zero enqueues.
+- All 100 book IDs were retrieved through the gateway, with both Search
+  upstreams observed.
+- Searching for `sea` returned 79 distinct results, all from the manifest.
+- `indexing-2` remained stopped; no automatic restart was performed.
+- Final shutdown released all deployment ports.
+
+Evidence: `results/deployment/full-failover-20261103-194255/`.
+
+The failure was injected during processing, after a count of 70/100 was
+observed, rather than exactly at the halfway point. The test demonstrates
+completion after replica loss; it does not establish that the killed
+replica was inside a SQLite transaction at that instant.
+
+These are functional deployment and resilience checks, not the performance
+benchmarks of issue #8. Monitoring includes idle time and may include time
+after service shutdown. Host metrics refer to Linux/WSL.
+
+The two full-pipeline runs used IDs from `spec/corpus/manifest_100.txt`;
+the 20-book smoke test is not the separate golden dataset test.
+
+### Offline golden quick run
+
+Verified on 2026-11-03: the preparation utility produced 20 indexed books
+and matched the canonical SHA-256:
+
+`b36095ef3966ccd1b5f273f914859aa83ff82e2499f695a422e364e8ecf0fc94`
+
+Two Search replicas and the nginx gateway were started against this
+datamart. Searching for `sea` through port 8080 returned 10 matches,
+with book 10056 ranked first.
+
+This quick run uses the bundled golden headers and compressed bodies.
+It prepares the datamart directly using the shared indexing code and
+does not exercise broker messaging or live downloads. Those paths were
+tested separately in the full-pipeline runs above.
+
+From the repository root, with Java, Maven and nginx installed:
+
+```bash
+mvn verify
+
+mkdir -p "$HOME/bench"
+goldenDir="$(mktemp -d "$HOME/bench/s2-golden-quick.XXXXXX")"
+cp config/deployment.env "$goldenDir/deployment.env"
+
+{
+    printf '\nDATA_DIR="%s/data"\n' "$goldenDir"
+    printf 'RUN_DIR="%s/run"\n' "$goldenDir"
+} >> "$goldenDir/deployment.env"
+
+java -cp "search-service/target/test-classes:search-service/target/search-service.jar" \
+    es.ulpgc.piedata.search.PrepareGoldenDatamart \
+    "$goldenDir/data"
+```
+
+Continue only if preparation exits successfully and reports the expected
+canonical hash and 20 indexed books:
+
+```bash
+bash scripts/run-all.sh --config "$goldenDir/deployment.env" --mode search
+
+curl --fail -sS 'http://127.0.0.1:8080/search?q=sea&limit=20'
+
+bash scripts/stop-all.sh --config "$goldenDir/deployment.env"
+```
+
+The preparation utility refuses to overwrite an existing database.
+Keep the same shell open so that `goldenDir` remains available.
+Evidence is stored under `results/deployment/golden-quick-*/`.

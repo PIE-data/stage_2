@@ -1,0 +1,98 @@
+diff --git a/config/deployment.env b/config/deployment.env
+index 5b5afca..2c25798 100644
+--- a/config/deployment.env
++++ b/config/deployment.env
+@@ -37,6 +37,10 @@ HTTP_THREADS_MAX=64
+ INGESTION_CONSUMER_THREADS=4
+ INDEXING_CONSUMER_THREADS=2
+ 
++# Indexing batch settings per consumer session.
++INDEXING_BATCH_SIZE=20
++INDEXING_BATCH_WAIT_MS=200
++
+ # SQLite writer page cache, MiB.
+ DATAMART_CACHE_MB=256
+ 
+diff --git a/scripts/deployment/manage.py b/scripts/deployment/manage.py
+index 1dcb574..f5b0a70 100644
+--- a/scripts/deployment/manage.py
++++ b/scripts/deployment/manage.py
+@@ -87,14 +87,6 @@ def wait_ready(row, port, timeout, service=None, host='127.0.0.1'):
+ def start(c, args, registry, rows):
+     if any(alive(r) for r in rows):
+         raise RuntimeError('Managed processes are already running; stop them first')
+-    if args.mode == 'full':
+-        # Refuse a false full-system success against the supplied skeletons.
+-        sources = [ROOT/'broker/src/main/java/es/ulpgc/piedata/broker/BrokerApp.java',
+-                   ROOT/'feeder/src/main/java/es/ulpgc/piedata/feeder/FeederApp.java',
+-                   ROOT/'ingestion-service/src/main/java/es/ulpgc/piedata/ingestion/IngestionApp.java']
+-        if any('Skeleton' in p.read_text() or 'not implemented yet' in p.read_text() for p in sources):
+-            raise RuntimeError('Full mode blocked: broker/feeder/ingestion are skeletons. Use --mode search. '
+-                               'Revalidate messaging integration when implementations arrive.')
+     data = Path(args.data_dir or c['DATA_DIR']).expanduser().resolve()
+     runtime = registry.parent
+     integer(c, 'HTTP_THREADS_MIN'); integer(c, 'HTTP_THREADS_MAX')
+@@ -102,6 +94,9 @@ def start(c, args, registry, rows):
+         raise ValueError('HTTP_THREADS_MAX must be >= HTTP_THREADS_MIN')
+     timeout = integer(c, 'STARTUP_TIMEOUT_SECONDS')
+     stop_timeout = integer(c, 'STOP_TIMEOUT_SECONDS')
++    if args.mode == 'full':
++        integer(c, 'INDEXING_BATCH_SIZE')
++        integer(c, 'INDEXING_BATCH_WAIT_MS')
+     for key in ('JAVA_HEAP_MIN', 'JAVA_HEAP_MAX'):
+         if not re.fullmatch(r'[1-9][0-9]*[kKmMgG]?', c[key]):
+             raise ValueError(f'Invalid {key}')
+@@ -167,6 +162,9 @@ def start(c, args, registry, rows):
+                     'datamart.cache-mb': c['DATAMART_CACHE_MB']}
+             if service in ('ingestion', 'indexing'):
+                 opts['consumer.threads'] = c[service.upper()+'_CONSUMER_THREADS']
++            if service == 'indexing':
++                opts['consumer.batch-size'] = c['INDEXING_BATCH_SIZE']
++                opts['consumer.batch-wait-ms'] = c['INDEXING_BATCH_WAIT_MS']
+             command = [java, '-Xms'+c['JAVA_HEAP_MIN'], '-Xmx'+c['JAVA_HEAP_MAX']]
+             command += [f'-D{k}={v}' for k,v in opts.items()]
+             command += ['-jar', str(ROOT/module/'target'/f'{module}.jar')]
+diff --git a/scripts/deployment/test_manage.py b/scripts/deployment/test_manage.py
+index 204fa82..57aa0ec 100644
+--- a/scripts/deployment/test_manage.py
++++ b/scripts/deployment/test_manage.py
+@@ -46,13 +46,32 @@ class LifecycleTests(unittest.TestCase):
+             m.stop([dict(pid=123,start='old',boot=m.BOOT)],1)
+             kill.assert_not_called()
+ 
+-    def test_full_mode_fails_before_starting_skeletons(self):
++    def test_invalid_batch_settings_fail_before_launch(self):
++        from types import SimpleNamespace
++        from unittest.mock import patch
++
+         with tempfile.TemporaryDirectory() as folder:
+-            config=Path(folder)/'deployment.env'
+-            config.write_text('RUN_DIR="'+folder+'/run"\n')
+-            result=subprocess.run(['python3',str(HERE/'manage.py'),'run','--config',str(config)],capture_output=True,text=True)
+-            self.assertNotEqual(result.returncode,0)
+-            self.assertIn('Full mode blocked',result.stderr)
+-            self.assertFalse((Path(folder)/'run/processes.json').exists())
++            registry = Path(folder) / 'run' / 'processes.json'
++            args = SimpleNamespace(mode='full', data_dir=None)
++            base_config = {
++                'DATA_DIR': str(Path(folder) / 'data'),
++                'HTTP_THREADS_MIN': '8',
++                'HTTP_THREADS_MAX': '64',
++                'STARTUP_TIMEOUT_SECONDS': '60',
++                'STOP_TIMEOUT_SECONDS': '30',
++                'INDEXING_BATCH_SIZE': '20',
++                'INDEXING_BATCH_WAIT_MS': '200',
++            }
++
++            for key in ('INDEXING_BATCH_SIZE', 'INDEXING_BATCH_WAIT_MS'):
++                for value in ('0', '-1', 'invalid'):
++                    with self.subTest(key=key, value=value):
++                        config = dict(base_config)
++                        config[key] = value
++                        with patch.object(m.subprocess, 'Popen') as launch:
++                            with self.assertRaisesRegex(ValueError, key):
++                                m.start(config, args, registry, [])
++                            launch.assert_not_called()
++                        self.assertFalse(registry.exists())
+ 
+ if __name__=='__main__': unittest.main()
