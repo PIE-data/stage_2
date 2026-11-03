@@ -34,6 +34,8 @@ public final class EmbeddedBroker implements AutoCloseable {
         this.broker = new BrokerService();
         this.broker.setBrokerName("pie-broker");
         this.broker.setUseJmx(false);
+        // Scheduler and temp stores go under dataDir too, not into ./activemq-data of the working dir.
+        this.broker.setDataDirectoryFile(new File(dataDir));
 
         KahaDBPersistenceAdapter adapter = new KahaDBPersistenceAdapter();
         adapter.setDirectory(new File(dataDir));
