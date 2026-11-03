@@ -7,7 +7,7 @@ INGESTION_URL="${INGESTION_URL:-http://localhost:7001}"
 INDEXING_URL="${INDEXING_URL:-http://localhost:7002}"
 SEARCH_URL="${SEARCH_URL:-http://localhost:7003}"
 FEEDER_URL="${FEEDER_URL:-http://localhost:7004}"
-GATEWAY_URL="${GATEWAY_URL:-}"
+GATEWAY_URL="${GATEWAY_URL:-http://127.0.0.1:8080}"
 BOOK_ID="${BOOK_ID:-1342}"
 RUN_MUTATING="${RUN_MUTATING:-1}"
 RUN_EVENT_CHECKS="${RUN_EVENT_CHECKS:-1}"
@@ -175,13 +175,9 @@ fi
 echo
 echo "8. Gateway checks"
 echo "-----------------"
-if [[ -n "$GATEWAY_URL" ]]; then
-  check_json_field "Gateway search" GET "$GATEWAY_URL/search?q=sea" 200 '"results"'
-  check_json_field "Gateway filters" GET "$GATEWAY_URL/search/filters" 200 '"languages"'
-  check_json_field "Gateway invalid book id" GET "$GATEWAY_URL/books/abc" 400 '"error":"invalid_book_id"'
-else
-  skip "Gateway checks: set GATEWAY_URL when issue #7 is merged"
-fi
+check_json_field "Gateway search" GET "$GATEWAY_URL/search?q=sea" 200 '"results"'
+check_json_field "Gateway filters" GET "$GATEWAY_URL/search/filters" 200 '"languages"'
+check_json_field "Gateway invalid book id" GET "$GATEWAY_URL/books/abc" 400 '"error":"invalid_book_id"'
 
 echo
 echo "========================================"
