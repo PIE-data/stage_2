@@ -2,6 +2,7 @@ package es.ulpgc.piedata.indexing;
 
 import es.ulpgc.piedata.common.config.AppConfig;
 import es.ulpgc.piedata.common.datamart.Datamart;
+import es.ulpgc.piedata.common.events.BrokerClient;
 import es.ulpgc.piedata.common.http.BadRequestException;
 import es.ulpgc.piedata.common.http.ServiceServer;
 import es.ulpgc.piedata.common.json.Json;
@@ -17,8 +18,11 @@ import java.util.Locale;
  * Indexing Service (#4): reads ingested books from the datalake and writes metadata + inverted
  * index into the datamart ({@code docs/DATAMART.md}).
  *
- * <p>Internal/administrative HTTP API (consumers: operators, scripts, benchmarks; the broker
- * consumer of piece D calls the same {@link IndexingService}):
+ * <p>Main input: the broker consumer of piece D ({@link IndexConsumer}) on {@code books.downloaded},
+ * started by {@link #main} unless {@code consumer.enabled=false}.
+ *
+ * <p>Internal/administrative HTTP API (consumers: operators, scripts, benchmarks; it calls the same
+ * {@link IndexingService} as the broker consumer):
  * <ul>
  *   <li>{@code POST /index/update/{book_id}}: index one book; 200 when it is committed (searchable)</li>
  *   <li>{@code POST /index/rebuild}: rebuild the datamart from every receipt, atomically</li>
@@ -36,7 +40,19 @@ public final class IndexingApp {
     public static void main(String[] args) {
         AppConfig config = AppConfig.load("application.properties");
         IndexingService service = openService(config);
+        BrokerClient brokerClient = new BrokerClient(config.get("broker.url"));
+        IndexConsumer consumer = Boolean.parseBoolean(config.get("consumer.enabled", "true"))
+                ? startConsumer(config, brokerClient, service) : null;
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            // consumer first: an uncommitted batch is rolled back and redelivered, never half-written
+            if (consumer != null) {
+                consumer.close();
+            }
+            try {
+                brokerClient.close();
+            } catch (Exception ignored) {
+                // closing at shutdown: nothing useful to do
+            }
             try {
                 service.close();
             } catch (SQLException ignored) {
@@ -44,6 +60,20 @@ public final class IndexingApp {
             }
         }));
         start(config, service);
+    }
+
+    /**
+     * Starts {@code consumer.threads} sessions on {@code books.downloaded}, each indexing up to
+     * {@code consumer.batch-size} messages per transaction (waiting at most
+     * {@code consumer.batch-wait-ms} for a batch to fill).
+     */
+    public static IndexConsumer startConsumer(AppConfig config, BrokerClient brokerClient, IndexingService service) {
+        IndexConsumer consumer = new IndexConsumer(brokerClient, service,
+                config.getInt("consumer.threads", 2),
+                config.getInt("consumer.batch-size", 20),
+                config.getInt("consumer.batch-wait-ms", 200));
+        consumer.start();
+        return consumer;
     }
 
     /** Opens the datamart under {@code data.dir}. */
