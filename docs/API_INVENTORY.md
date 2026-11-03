@@ -1,120 +1,79 @@
 # API Inventory — Stage 2
 
-This document gives a simple overview of the HTTP endpoints used in Stage 2.
+This document is a compact inventory of the HTTP interfaces currently implemented in the PIE-data Stage 2 system.
 
-It answers three basic questions for each endpoint:
+For each endpoint it answers three questions: who provides it, who uses it, and what it is for.
 
-- Who provides it?
-- Who uses it?
-- What is it used for?
-
-HTTP endpoints are grouped into:
-
-- front-end endpoints,
-- internal endpoints,
-- administrative and health endpoints.
-
-Communication through ActiveMQ is not HTTP, so it is documented separately in [EVENTS.md](EVENTS.md).
+Non-HTTP coordination through ActiveMQ is defined in [EVENTS.md](EVENTS.md).
 
 ## 1. Front-end API
 
-These endpoints are provided by the Search Service.
+| Method | Route | Provider | Consumer | Purpose |
+|---|---|---|---|---|
+| GET | `/search` | Search Service | Front-end / HTTP client | Search indexed books by query text, with optional author, language, year and pagination parameters. |
+| GET | `/search/filters` | Search Service | Front-end / HTTP client | Return languages and Gutenberg release-year range available in the current datamart. |
+| GET | `/books/{book_id}` | Search Service | Front-end / HTTP client | Return metadata for one indexed book. |
 
-They are the endpoints that a front-end application, or a user testing the API, would use to search for books and display information.
+Search runs directly on port `7003`. The deployment issue (#7) adds the nginx gateway in front of Search replicas on port `8080`; gateway validation is added when that work is merged.
 
-| Method | Route              | Provider       | Consumer                | Purpose                                                                                                            |
-| ------ | ------------------ | -------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| GET    | `/search`          | Search Service | Front-end / HTTP client | Search books using words entered by the user. Optional filters such as author, language and year can also be used. |
-| GET    | `/search/filters`  | Search Service | Front-end / HTTP client | Get the languages and year range currently available in the indexed books.                                         |
-| GET    | `/books/{book_id}` | Search Service | Front-end / HTTP client | Get information about one specific indexed book.                                                                   |
+## 2. Internal API
 
-The Search Service uses port `7003` by default.
+| Method | Route | Provider | Consumer | Purpose |
+|---|---|---|---|---|
+| POST | `/ingest/{book_id}` | Ingestion Service | Operator / HTTP client | Accept an ingestion request. Returns `200` if already ingested or `202` after publishing `IngestRequested` to ActiveMQ. |
+| GET | `/ingest/status/{book_id}` | Ingestion Service | Operator / scripts / validation | Return `downloaded`, `failed` or `not_found` for one book. |
+| GET | `/ingest/list` | Ingestion Service | Feeder / scripts | Return ids that already have ingestion receipts so the Feeder can skip completed work. |
 
-Example:
+The Feeder calls `/ingest/list` with Java `HttpClient`. The current implementation does not set an explicit request timeout and does not retry the HTTP request. If the call fails, the Feeder falls back to its local `ReceiptStore`.
 
-`GET /search?q=sea&language=en`
-
-means:
-
-“Find indexed books containing the query `sea` and keep only English-language results.”
-
-In the final deployment, the front-end may access Search through the gateway instead of calling port `7003` directly.
-
-## 2. Internal communication
-
-The main workflow between Ingestion and Indexing does not use direct HTTP calls.
-
-Instead, the services communicate through ActiveMQ events.
-
-The main event flow is:
+Most service-to-service coordination is not HTTP. It uses ActiveMQ:
 
 `Feeder → ingest.requests → Ingestion → books.downloaded → Indexing → books.indexed`
 
-This means:
-
-- `ingest.requests` tells Ingestion that a book should be downloaded.
-- `books.downloaded` tells Indexing that the book is completely stored in the datalake and is ready to be indexed.
-- `books.indexed` announces that the book has been indexed and is now searchable.
-
-The full event rules, including message payloads, retries, acknowledgements and duplicate handling, are documented in [EVENTS.md](EVENTS.md).
-
-The internal HTTP section will be updated if additional service-to-service HTTP endpoints are implemented.
+The event contract, payloads, acknowledgement rules, retries, duplicate handling and DLQ behaviour are documented in [EVENTS.md](EVENTS.md).
 
 ## 3. Administrative and health API
 
-These endpoints are not used by the normal search front-end.
-
-They are mainly used by developers, scripts, benchmarks, monitoring or validation.
-
-| Method | Route                     | Provider          | Consumer                         | Purpose                                                                                          |
-| ------ | ------------------------- | ----------------- | -------------------------------- | ------------------------------------------------------------------------------------------------ |
-| POST   | `/index/update/{book_id}` | Indexing Service  | Scripts / developer / validation | Index or re-index one book that has already been ingested.                                       |
-| POST   | `/index/rebuild`          | Indexing Service  | Scripts / developer / validation | Rebuild the whole datamart from the available ingested books.                                    |
-| GET    | `/index/status`           | Indexing Service  | Monitoring / scripts             | Check how many books, terms and postings are currently indexed and whether a rebuild is running. |
-| GET    | `/status`                 | Search Service    | Monitoring / scripts             | Check whether Search is running and whether its datamart is ready.                               |
-| GET    | `/status`                 | Indexing Service  | Monitoring / scripts             | Check whether Indexing is running.                                                               |
-| GET    | `/status`                 | Ingestion Service | Monitoring / scripts             | Check whether Ingestion is running.                                                              |
-| GET    | `/status`                 | Feeder            | Monitoring / scripts             | Check whether the Feeder is running.                                                             |
+| Method | Route | Provider | Consumer | Purpose |
+|---|---|---|---|---|
+| POST | `/index/update/{book_id}` | Indexing Service | Operator / scripts / validation | Index or re-index one ingested book. A `200` response means the update is already committed. |
+| POST | `/index/rebuild` | Indexing Service | Operator / scripts / validation | Rebuild the whole datamart atomically from ingestion receipts. |
+| GET | `/index/status` | Indexing Service | Monitoring / scripts / benchmarks | Return book, term and posting counts, datamart size and rebuild state. |
+| POST | `/feeder/run` | Feeder | Operator / scripts / benchmarks | Read a manifest and publish ingestion requests for selected books that are not yet ingested. |
+| GET | `/feeder/status` | Feeder | Monitoring / scripts | Return requested, downloaded, indexed and failed counters. |
+| GET | `/broker/stats` | Broker | Monitoring / benchmarks | Return queue depth, enqueue/dequeue counts, inflight messages and average queue time. |
+| GET | `/status` | Broker | Monitoring / scripts | Report Broker HTTP process health plus broker queue information. |
+| GET | `/status` | Ingestion Service | Monitoring / scripts | Report service health plus `ingested_count`. |
+| GET | `/status` | Indexing Service | Monitoring / scripts | Report service health. |
+| GET | `/status` | Search Service | Monitoring / scripts | Report service health plus datamart readiness and indexed-book count. |
+| GET | `/status` | Feeder | Monitoring / scripts | Report service health plus Feeder progress counters. |
 
 Default ports:
 
-| Service           |   Port |
-| ----------------- | -----: |
+| Service | Port |
+|---|---:|
+| Broker HTTP monitoring | `7000` |
+| ActiveMQ OpenWire | `61616` |
 | Ingestion Service | `7001` |
-| Indexing Service  | `7002` |
-| Search Service    | `7003` |
-| Feeder            | `7004` |
+| Indexing Service | `7002` |
+| Search Service | `7003` |
+| Feeder | `7004` |
+| Gateway | `8080` when issue #7 is available |
 
-## 4. How to think about the API
+## 4. Completion, retries and idempotency
 
-The API is the agreed way to communicate with a service.
+`POST /ingest/{book_id}` is asynchronous when the book is new. `202 Accepted` means the request was published to ActiveMQ; it does not mean the book has already been downloaded. If the book already has a receipt, the endpoint returns `200` with `already_ingested`.
 
-An endpoint is one specific operation inside that API.
+Indexing HTTP operations are synchronous. `POST /index/update/{book_id}` and `POST /index/rebuild` return `200` only after the datamart operation has completed.
 
-For example:
+Ingestion and indexing are idempotent. Duplicate broker delivery is allowed because the system uses at-least-once delivery. Ingestion skips an already completed book, indexing replaces the existing rows for a book, and the Feeder counts distinct indexed ids.
 
-`GET /search`
+Broker consumers use transacted JMS sessions. Transient failures are rolled back and redelivered up to five times with exponential delays. Malformed messages eventually go to `ActiveMQ.DLQ`. See [EVENTS.md](EVENTS.md) for the binding non-HTTP contract.
 
-means:
+## 5. Detailed HTTP rules and checks
 
-“Search for books.”
+The full HTTP contract is defined in `api/openapi.yaml`.
 
-`GET /books/1342`
+Runnable manual requests are in `api/api-checks.http`.
 
-means:
-
-“Give me information about book 1342.”
-
-`POST /index/rebuild`
-
-means:
-
-“Rebuild the index.”
-
-`GET /status`
-
-means:
-
-“Tell me whether this service is running.”
-
-The detailed rules for every HTTP endpoint, including parameters, responses, errors and validation, are defined in `api/openapi.yaml`.
+Automated endpoint and event checks are launched through `scripts/check-api.sh`.

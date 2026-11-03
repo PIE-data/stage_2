@@ -1,68 +1,97 @@
-@search = http://localhost:7003
-@indexing = http://localhost:7002
+@broker = http://localhost:7000
 @ingestion = http://localhost:7001
+@indexing = http://localhost:7002
+@search = http://localhost:7003
 @feeder = http://localhost:7004
+@gateway = http://localhost:8080
+@bookId = 1342
 
+### BROKER — health
+GET {{broker}}/status
 
-### SEARCH — health
-GET {{search}}/status
-
-
-### SEARCH — basic keyword search
-GET {{search}}/search?q=sea
-
-
-### SEARCH — search with filters
-GET {{search}}/search?q=sea&language=en&offset=0&limit=20
-
-
-### SEARCH — combined filters
-GET {{search}}/search?q=sea&author=melville&language=en
-
-
-### SEARCH — pagination
-GET {{search}}/search?q=sea&offset=20&limit=20
-
-
-### SEARCH — invalid limit, expected 400
-GET {{search}}/search?q=sea&limit=500
-
-
-### SEARCH — missing q, expected 400
-GET {{search}}/search
-
-
-### SEARCH — available filters
-GET {{search}}/search/filters
-
-
-### SEARCH — one book
-GET {{search}}/books/1342
-
-
-### SEARCH — invalid book id, expected 400
-GET {{search}}/books/abc
-
-
-### INDEXING — health
-GET {{indexing}}/status
-
-
-### INDEXING — status
-GET {{indexing}}/index/status
-
-
-### INDEXING — update one book
-POST {{indexing}}/index/update/1342
-
-
-### INDEXING — rebuild complete index
-POST {{indexing}}/index/rebuild
-
+### BROKER — queue statistics
+GET {{broker}}/broker/stats
 
 ### INGESTION — health
 GET {{ingestion}}/status
 
+### INGESTION — list completed ingestions
+GET {{ingestion}}/ingest/list
+
+### INGESTION — status of one book
+GET {{ingestion}}/ingest/status/{{bookId}}
+
+### INGESTION — invalid id, expected 400
+GET {{ingestion}}/ingest/status/abc
+
+### INGESTION — request one book
+# Expected: 202 if new, 200 if already ingested.
+POST {{ingestion}}/ingest/{{bookId}}
+
+### SEARCH — health
+GET {{search}}/status
+
+### SEARCH — basic search
+GET {{search}}/search?q=sea
+
+### SEARCH — search with filters and pagination
+GET {{search}}/search?q=sea&language=en&offset=0&limit=20
+
+### SEARCH — available filters
+GET {{search}}/search/filters
+
+### SEARCH — one book
+GET {{search}}/books/{{bookId}}
+
+### SEARCH — missing q, expected 400
+GET {{search}}/search
+
+### SEARCH — invalid limit, expected 400
+GET {{search}}/search?q=sea&limit=500
+
+### SEARCH — invalid language, expected 400
+GET {{search}}/search?q=sea&language=english
+
+### SEARCH — invalid year, expected 400
+GET {{search}}/search?q=sea&year=20
+
+### SEARCH — negative offset, expected 400
+GET {{search}}/search?q=sea&offset=-1
+
+### SEARCH — duplicate q, expected 400
+GET {{search}}/search?q=sea&q=ship
+
+### SEARCH — invalid book id, expected 400
+GET {{search}}/books/abc
+
+### INDEXING — health
+GET {{indexing}}/status
+
+### INDEXING — index statistics
+GET {{indexing}}/index/status
+
+### INDEXING — invalid update id, expected 400
+POST {{indexing}}/index/update/0
+
+### INDEXING — update one ingested book
+POST {{indexing}}/index/update/{{bookId}}
+
+### INDEXING — rebuild datamart
+POST {{indexing}}/index/rebuild
 
 ### FEEDER — health
 GET {{feeder}}/status
+
+### FEEDER — progress
+GET {{feeder}}/feeder/status
+
+### FEEDER — submit one item from tier 100
+POST {{feeder}}/feeder/run?manifest=100&count=1
+
+### GATEWAY — basic search
+# Run when issue #7 gateway is available.
+GET {{gateway}}/search?q=sea
+
+### GATEWAY — available filters
+# Run when issue #7 gateway is available.
+GET {{gateway}}/search/filters
