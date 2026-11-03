@@ -142,3 +142,42 @@ The Feeder can be run in two ways depending on the use case:
     }
     ```
   - `GET /status`: Standard service health check reporting uptime and port.
+
+## 7. Ingestion Service Design and Implementation
+
+The Ingestion Service is responsible for fetching books from Project Gutenberg, splitting their headers and bodies according to the Stage 1 specification, persisting them into the hashed datalake, and announcing their availability via ActiveMQ.
+
+### Datalake Layout and Atomic Storage
+- **Hash Layout**: Books are stored using the Stage 1 two-level hash directory structure (`datalake/<hash1>/<hash2>/<id>.header.txt` and `.body.txt`), enabling uniform directory distribution and $O(1)$ filesystem lookups.
+- **Atomic Writes**: Writing directly to the destination file risks leaving corrupted or partial content if a worker crashes mid-write. We guarantee disk atomicity using `AtomicWriter`: content is written to a `<target>.part` file, explicitly flushed with `FileChannel.force(true)`, and atomically moved to its target path via `Files.move(..., ATOMIC_MOVE, REPLACE_EXISTING)`.
+- **Receipts**: A book is only considered available once its receipt (`control/ingestion/hash/<id>.json`) is written. Any partial writes without a receipt are ignored.
+
+### Marker Detection and Text Cleaning Port
+The Java `BookSplitter` ports the exact 6-step body cleaning and 4-step header cleaning algorithms from Stage 1:
+- Strips UTF-8 BOM, normalizes line endings (`\r\n` and `\r` to `\n`), trims trailing whitespace per line, collapses $3+$ consecutive newlines to $2$, trims outer margins, and guarantees a trailing newline.
+- Finds the **first** occurrence of `*** START OF THE PROJECT GUTENBERG EBOOK` and the **last** occurrence of `*** END OF THE PROJECT GUTENBERG EBOOK`, ensuring synthetic quoted markers inside the book body do not prematurely truncate the text.
+- Verified byte-identically against the 20 golden books from the Stage 1 oracle.
+
+### Multi-Replica Concurrency: Per-Book Claims
+In Stage 1, single-instance execution used a global `run.lock`. In Stage 2, multiple Ingestion replicas run concurrently:
+- We replaced the global lock with fine-grained per-book claims: `BookClaim.acquire(dataDir, bookId)`.
+- Combines an in-process JVM lock (`ReentrantLock`) for thread-level safety and an OS file lock (`FileChannel.lock` on `control/claims/<id>.lock`) for cross-process replica safety.
+- If two replicas receive the same `book_id`, one acquires the lock and downloads the book; the second blocks, and once the lock is acquired, detects the freshly written receipt and skips re-downloading.
+- Verified in `IngestionConcurrencyTest`: 2 replicas competing simultaneously across 100 books produce exactly 100 receipts, 0 race conditions, and 0 leftover `.part` files.
+
+### Failure Handling: Permanent vs Transient
+- **Transient network/server errors (5xx, timeouts)**: `GutenbergDownloader` performs exponential backoff retries (1s, 2s, 4s). If still failing, the consumer rolls back the JMS transaction for ActiveMQ to retry.
+- **Permanent errors (404 Not Found, missing markers)**: Books that do not exist or violate formatting are recorded with their timestamp in `control/failed_books.txt` and acknowledged (`session.commit()`). This prevents poison loops, clears the broker queue, and leaves the books visible as `failed` in status endpoints.
+
+### HTTP REST API
+The Ingestion Service exposes the following endpoints (default port `7001`):
+- `POST /ingest/{book_id}`: Validates positive ID. Returns `200 OK` (`already_ingested`) if the book receipt exists, or `202 Accepted` after enqueuing `IngestRequested` to ActiveMQ. Returns `503 Service Unavailable` if the broker is unreachable.
+- `GET /ingest/status/{book_id}`: Returns JSON status (`downloaded`, `failed`, or `not_found`).
+- `GET /ingest/list`: Returns the complete JSON array of ingested IDs for Feeder pre-filtering.
+- `GET /status`: Standard health check reporting replica uptime and `ingested_count`.
+
+### Microbenchmarking (JMH)
+We implemented `BookSplitterBenchmark` under `src/test/java/.../benchmark/` to isolate and measure the CPU cost of the text splitting and cleaning pipeline on golden books with microsecond precision. It can be run on demand using:
+```bash
+mvn -pl ingestion-service test-compile exec:exec -Djmh.include=BookSplitterBenchmark
+```
