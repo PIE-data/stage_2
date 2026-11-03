@@ -17,6 +17,7 @@
         <module>indexing-service</module>
         <module>search-service</module>
         <module>feeder</module>
+        <module>bench-client</module>
     </modules>
 
     <properties>
