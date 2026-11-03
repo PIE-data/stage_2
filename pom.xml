@@ -17,6 +17,7 @@
         <module>indexing-service</module>
         <module>search-service</module>
         <module>feeder</module>
+        <module>bench-client</module>
     </modules>
 
     <properties>
@@ -29,6 +30,7 @@
         <junit.version>5.10.2</junit.version>
         <jmh.version>1.37</jmh.version>
         <sqlite-jdbc.version>3.46.1.0</sqlite-jdbc.version>
+        <activemq.version>5.18.3</activemq.version>
 
         <!-- JMH run settings (brief section 6.3); override with -Djmh.include=... etc. -->
         <jmh.include>.*</jmh.include>
@@ -79,6 +81,21 @@
                 <groupId>org.xerial</groupId>
                 <artifactId>sqlite-jdbc</artifactId>
                 <version>${sqlite-jdbc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-broker</artifactId>
+                <version>${activemq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-kahadb-store</artifactId>
+                <version>${activemq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-client</artifactId>
+                <version>${activemq.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
