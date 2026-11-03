@@ -1,0 +1,732 @@
+openapi: 3.1.0
+
+info:
+  title: PIE-data Search Engine API
+  version: 0.2.0
+  description: >
+    HTTP API specification for the PIE-data Stage 2 search engine.
+    It documents the endpoints currently implemented by the Broker,
+    Ingestion, Indexing, Search and Feeder services.
+
+tags:
+  - name: Search
+    description: Front-end-facing search operations.
+  - name: Ingestion
+    description: Ingestion operations and ingestion state.
+  - name: Indexing
+    description: Internal and administrative indexing operations.
+  - name: Feeder
+    description: Workload submission and progress reporting.
+  - name: Broker
+    description: Message-broker monitoring.
+  - name: Operational
+    description: Common health/status operations.
+
+paths:
+  /search:
+    get:
+      tags: [Search]
+      summary: Search indexed books
+      description: >
+        Searches indexed books using query text and optional metadata filters.
+        Multiple normalized query terms use AND semantics, so a book must match
+        every normalized query term. Results are ordered by score descending
+        and then by book_id ascending. Each query parameter may be specified
+        at most once.
+      servers:
+        - url: http://localhost:7003
+          description: Search Service
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: >
+            Search text. If tokenization removes every term, the request still
+            succeeds and returns an empty result list.
+          schema:
+            type: string
+          example: sea ship
+        - name: author
+          in: query
+          required: false
+          description: Case-insensitive substring filter on the stored author name.
+          schema:
+            type: string
+          example: melville
+        - name: language
+          in: query
+          required: false
+          description: Lowercase ISO 639-1 language code such as en or es.
+          schema:
+            type: string
+            pattern: '^[a-z]{2}$'
+          example: en
+        - name: year
+          in: query
+          required: false
+          description: Four-digit Project Gutenberg e-book release year.
+          schema:
+            type: string
+            pattern: '^[0-9]{4}$'
+          example: '2001'
+        - name: offset
+          in: query
+          required: false
+          description: Number of matching results to skip.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results returned on one page.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Search completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid or duplicated search parameter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /search/filters:
+    get:
+      tags: [Search]
+      summary: Get available search filters
+      servers:
+        - url: http://localhost:7003
+          description: Search Service
+      responses:
+        '200':
+          description: Filter choices returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilterChoices'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /books/{book_id}:
+    get:
+      tags: [Search]
+      summary: Get metadata for one indexed book
+      servers:
+        - url: http://localhost:7003
+          description: Search Service
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Book found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookDetails'
+        '400':
+          $ref: '#/components/responses/InvalidBookId'
+        '404':
+          description: Valid identifier but no indexed book exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ingest/{book_id}:
+    post:
+      tags: [Ingestion]
+      summary: Request ingestion of one Gutenberg book
+      description: >
+        Returns 200 immediately if the book is already ingested. Otherwise it
+        publishes IngestRequested to ActiveMQ and returns 202 Accepted; the
+        download and split happen asynchronously. The operation is idempotent.
+        If ActiveMQ is unavailable, the endpoint returns 503.
+      servers:
+        - url: http://localhost:7001
+          description: Ingestion Service
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: The book was already ingested.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestRequestResponse'
+        '202':
+          description: Request accepted and published to ActiveMQ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestRequestResponse'
+        '400':
+          $ref: '#/components/responses/InvalidBookId'
+        '503':
+          description: Request could not be published to ActiveMQ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ingest/status/{book_id}:
+    get:
+      tags: [Ingestion]
+      summary: Get ingestion status for one book
+      description: Returns downloaded, failed or not_found.
+      servers:
+        - url: http://localhost:7001
+          description: Ingestion Service
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Current ingestion state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestBookStatus'
+        '400':
+          $ref: '#/components/responses/InvalidBookId'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ingest/list:
+    get:
+      tags: [Ingestion]
+      summary: List ingested book identifiers
+      description: >
+        Returns ids that already have ingestion receipts. The Feeder calls this
+        endpoint before publishing work. The current Feeder implementation has
+        no explicit HTTP request timeout and no HTTP retry; if the call fails it
+        falls back to its local ReceiptStore.
+      servers:
+        - url: http://localhost:7001
+          description: Ingestion Service
+      responses:
+        '200':
+          description: List of ingested book ids.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                  format: int64
+                  minimum: 1
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /index/update/{book_id}:
+    post:
+      tags: [Indexing]
+      summary: Index or re-index one ingested book
+      description: >
+        A successful 200 means the datamart update is already committed. The
+        operation is idempotent. A 503 datamart_busy response may be retried.
+      servers:
+        - url: http://localhost:7002
+          description: Indexing Service
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Index update completed and committed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexUpdateResponse'
+        '400':
+          $ref: '#/components/responses/InvalidBookId'
+        '404':
+          description: The book has no ingestion receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Receipt exists but required datalake files are inconsistent or missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Datamart temporarily unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /index/rebuild:
+    post:
+      tags: [Indexing]
+      summary: Rebuild the complete datamart
+      description: >
+        Rebuilds the datamart atomically from all ingestion receipts. A 200
+        response means the rebuild has completed. Only one rebuild may run at a time.
+      servers:
+        - url: http://localhost:7002
+          description: Indexing Service
+      responses:
+        '200':
+          description: Rebuild completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexRebuildResponse'
+        '409':
+          description: Rebuild already running or datalake inconsistent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Datamart temporarily unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /index/status:
+    get:
+      tags: [Indexing]
+      summary: Get indexing/datamart statistics
+      servers:
+        - url: http://localhost:7002
+          description: Indexing Service
+      responses:
+        '200':
+          description: Current indexing state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexStatusResponse'
+        '503':
+          description: Datamart temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /feeder/run:
+    post:
+      tags: [Feeder]
+      summary: Submit ingestion work from a manifest
+      description: >
+        Reads a Stage 1 manifest, skips ids that are already ingested and
+        publishes IngestRequested events. If manifest is omitted,
+        spec/corpus/manifest_100.txt is used. A numeric manifest N resolves to
+        spec/corpus/manifest_N.txt. Repeated requests may republish work still
+        in flight; downstream ingestion and indexing are idempotent.
+      servers:
+        - url: http://localhost:7004
+          description: Feeder
+      parameters:
+        - name: manifest
+          in: query
+          required: false
+          schema:
+            type: string
+          example: '100'
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 10
+      responses:
+        '200':
+          description: Manifest processed and requests published.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeederRunResponse'
+        '500':
+          description: Current implementation uses generic 500 for invalid Feeder input or unexpected failures.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /feeder/status:
+    get:
+      tags: [Feeder]
+      summary: Get Feeder progress counters
+      servers:
+        - url: http://localhost:7004
+          description: Feeder
+      responses:
+        '200':
+          description: Current Feeder counters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeederStatus'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /broker/stats:
+    get:
+      tags: [Broker]
+      summary: Get ActiveMQ queue statistics
+      servers:
+        - url: http://localhost:7000
+          description: Broker HTTP monitoring service
+      responses:
+        '200':
+          description: Current queue statistics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrokerStats'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /status:
+    get:
+      tags: [Operational]
+      summary: Get service health status
+      description: Common health endpoint exposed by every HTTP process.
+      servers:
+        - url: http://localhost:7000
+          description: Broker HTTP monitoring service
+        - url: http://localhost:7001
+          description: Ingestion Service
+        - url: http://localhost:7002
+          description: Indexing Service
+        - url: http://localhost:7003
+          description: Search Service
+        - url: http://localhost:7004
+          description: Feeder
+      responses:
+        '200':
+          description: Service is running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    BookId:
+      name: book_id
+      in: path
+      required: true
+      description: Positive Project Gutenberg book identifier.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      example: 1342
+
+  responses:
+    InvalidBookId:
+      description: book_id is not a positive integer.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InternalError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    ApiError:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    SearchFilters:
+      type: object
+      additionalProperties: false
+      properties:
+        author:
+          type: string
+        language:
+          type: string
+        year:
+          type: integer
+
+    SearchResponse:
+      type: object
+      required: [query, filters, total, offset, limit, results]
+      properties:
+        query:
+          type: string
+        filters:
+          $ref: '#/components/schemas/SearchFilters'
+        total:
+          type: integer
+          minimum: 0
+        offset:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookHit'
+
+    BookHit:
+      type: object
+      required: [book_id, title, author, language, year, score]
+      properties:
+        book_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        author:
+          type: [string, 'null']
+        language:
+          type: [string, 'null']
+        year:
+          type: [integer, 'null']
+        score:
+          type: number
+          format: double
+
+    BookDetails:
+      type: object
+      required: [book_id, title, author, language, year]
+      properties:
+        book_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        author:
+          type: [string, 'null']
+        language:
+          type: [string, 'null']
+        year:
+          type: [integer, 'null']
+
+    YearRange:
+      type: object
+      required: [min, max]
+      properties:
+        min:
+          type: [integer, 'null']
+        max:
+          type: [integer, 'null']
+
+    FilterChoices:
+      type: object
+      required: [languages, year_range]
+      properties:
+        languages:
+          type: array
+          items:
+            type: string
+        year_range:
+          $ref: '#/components/schemas/YearRange'
+
+    IngestRequestResponse:
+      type: object
+      required: [status, book_id]
+      properties:
+        status:
+          type: string
+          enum: [accepted, already_ingested]
+        book_id:
+          type: integer
+          format: int64
+          minimum: 1
+
+    IngestBookStatus:
+      type: object
+      required: [bookId, status, ingestedAt, headerPath, bodyPath, reason]
+      properties:
+        bookId:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          type: string
+          enum: [downloaded, failed, not_found]
+        ingestedAt:
+          type: [string, 'null']
+        headerPath:
+          type: [string, 'null']
+        bodyPath:
+          type: [string, 'null']
+        reason:
+          type: [string, 'null']
+
+    IndexUpdateResponse:
+      type: object
+      required: [book_id, index, distinct_terms, tokens, elapsed_ms]
+      properties:
+        book_id:
+          type: integer
+          format: int64
+        index:
+          type: string
+          enum: [updated]
+        distinct_terms:
+          type: integer
+          minimum: 0
+        tokens:
+          type: integer
+          minimum: 0
+        elapsed_ms:
+          type: integer
+          format: int64
+          minimum: 0
+
+    IndexRebuildResponse:
+      type: object
+      required: [books_processed, elapsed_time, elapsed_ms]
+      properties:
+        books_processed:
+          type: integer
+          minimum: 0
+        elapsed_time:
+          type: string
+        elapsed_ms:
+          type: integer
+          format: int64
+          minimum: 0
+
+    IndexStatusResponse:
+      type: object
+      required: [books_indexed, terms, postings, last_update, index_size_MB, rebuild_in_progress]
+      properties:
+        books_indexed:
+          type: integer
+          format: int64
+          minimum: 0
+        terms:
+          type: integer
+          format: int64
+          minimum: 0
+        postings:
+          type: integer
+          format: int64
+          minimum: 0
+        last_update:
+          type: [string, 'null']
+        index_size_MB:
+          type: number
+          format: double
+          minimum: 0
+        rebuild_in_progress:
+          type: boolean
+
+    FeederRunResponse:
+      type: object
+      required: [manifest, manifest_total, already_ingested, requested]
+      properties:
+        manifest:
+          type: string
+        manifest_total:
+          type: integer
+          minimum: 0
+        already_ingested:
+          type: integer
+          minimum: 0
+        requested:
+          type: integer
+          minimum: 0
+
+    FeederStatus:
+      type: object
+      required: [requested, downloaded, indexed, failed]
+      properties:
+        requested:
+          type: integer
+          minimum: 0
+        downloaded:
+          type: integer
+          minimum: 0
+        indexed:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+
+    QueueStats:
+      type: object
+      required: [depth, enqueued, dequeued, inflight, average_time_ms]
+      properties:
+        depth:
+          type: integer
+          format: int64
+          minimum: 0
+        enqueued:
+          type: integer
+          format: int64
+          minimum: 0
+        dequeued:
+          type: integer
+          format: int64
+          minimum: 0
+        inflight:
+          type: integer
+          format: int64
+          minimum: 0
+        average_time_ms:
+          type: number
+          format: double
+          minimum: 0
+
+    BrokerStats:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/QueueStats'
+
+    ServiceStatus:
+      type: object
+      required: [service, status, port, threads_min, threads_max, uptime_s]
+      additionalProperties: true
+      properties:
+        service:
+          type: string
+        status:
+          type: string
+          enum: [running]
+        port:
+          type: integer
+        threads_min:
+          type: integer
+        threads_max:
+          type: integer
+        uptime_s:
+          type: integer
+          format: int64
+          minimum: 0
