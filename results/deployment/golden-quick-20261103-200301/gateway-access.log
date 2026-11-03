@@ -1,0 +1,2 @@
+2026-11-03T20:03:32+00:00 "GET /status HTTP/1.1" status=200 upstream=127.0.0.1:7003 upstream_status=200 request_time=0.011
+2026-11-03T20:04:01+00:00 "GET /search?q=sea&limit=20 HTTP/1.1" status=200 upstream=127.0.0.1:7013 upstream_status=200 request_time=0.038

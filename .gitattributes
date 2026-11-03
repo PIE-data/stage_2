@@ -13,3 +13,8 @@ spec/queries/** -text
 *.jar binary
 *.png binary
 *.pdf binary
+
+# Preserve captured patches and raw HTTP header formatting.
+results/deployment/full-smoke-20261103-193735/deployment-changes.patch whitespace=-blank-at-eol
+results/deployment/full-failover-20261103-194255/deployment-changes.patch whitespace=-blank-at-eol
+results/deployment/full-smoke-20261103-193735/search-headers.txt whitespace=-blank-at-eof

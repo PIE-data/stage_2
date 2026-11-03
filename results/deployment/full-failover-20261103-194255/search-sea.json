@@ -1,0 +1,644 @@
+{
+  "upstream": "127.0.0.1:7013",
+  "response": {
+    "query": "sea",
+    "filters": {},
+    "total": 79,
+    "offset": 0,
+    "limit": 100,
+    "results": [
+      {
+        "book_id": 8884,
+        "title": "Travels in Syria and the Holy Land",
+        "author": "John Lewis Burckhardt",
+        "language": "en",
+        "year": 2005,
+        "score": 55.15902604393037
+      },
+      {
+        "book_id": 11431,
+        "title": "Character Sketches of Romance, Fiction and the Drama, Vol. 1",
+        "author": "Ebenezer Cobham Brewer",
+        "language": "en",
+        "year": 2004,
+        "score": 24.279400352670205
+      },
+      {
+        "book_id": 49118,
+        "title": "The History of the Crusades (vol. 2 of 3)",
+        "author": "J. Fr. Michaud",
+        "language": "en",
+        "year": 2015,
+        "score": 20.743565349854155
+      },
+      {
+        "book_id": 32182,
+        "title": "Encyclopaedia Britannica, 11th Edition, \"Coquelin, Benoît Constant\" to \"Costume\"",
+        "author": "Various",
+        "language": "en",
+        "year": 2010,
+        "score": 17.914897347601315
+      },
+      {
+        "book_id": 33988,
+        "title": "To Win the Love He Sought",
+        "author": "E. Phillips Oppenheim",
+        "language": "en",
+        "year": 2010,
+        "score": 16.029118679432756
+      },
+      {
+        "book_id": 43334,
+        "title": "Jack Hardy: A Story of English Smugglers in the Days of Napoleon",
+        "author": null,
+        "language": "en",
+        "year": 2013,
+        "score": 13.436173010700987
+      },
+      {
+        "book_id": 47961,
+        "title": "Natural Wonders",
+        "author": "Edwin Tenney Brewster",
+        "language": "en",
+        "year": 2015,
+        "score": 13.436173010700987
+      },
+      {
+        "book_id": 64029,
+        "title": "Life at the Zoo: Notes and Traditions of the Regent's Park Gardens",
+        "author": "C. J. Cornish",
+        "language": "en",
+        "year": 2020,
+        "score": 12.493283676616707
+      },
+      {
+        "book_id": 55172,
+        "title": "Evolution and creation",
+        "author": "Herbert Junius Hardwicke",
+        "language": "en",
+        "year": 2017,
+        "score": 8.721726340279588
+      },
+      {
+        "book_id": 46218,
+        "title": "The Jesuit Relations and Allied Documents, Vol. 3: Acadia, 1611-1616",
+        "author": null,
+        "language": "en",
+        "year": 2014,
+        "score": 8.250281673237447
+      },
+      {
+        "book_id": 27336,
+        "title": "Three Women",
+        "author": "Ella Wheeler Wilcox",
+        "language": "en",
+        "year": 2008,
+        "score": 8.014559339716378
+      },
+      {
+        "book_id": 6692,
+        "title": "The Swiss Family Robinson, Told in Words of One Syllable",
+        "author": "Lucy Aikin Johann David Wyss",
+        "language": "en",
+        "year": 2004,
+        "score": 7.7788370061953085
+      },
+      {
+        "book_id": 24020,
+        "title": "Romola",
+        "author": "George Eliot",
+        "language": "en",
+        "year": 2007,
+        "score": 7.543114672674238
+      },
+      {
+        "book_id": 44669,
+        "title": "The Jesuit Relations and Allied Documents, Vol. 1: Acadia, 1610-1613",
+        "author": null,
+        "language": "en",
+        "year": 2014,
+        "score": 7.543114672674238
+      },
+      {
+        "book_id": 11101,
+        "title": "Coleridge's Ancient Mariner and Select Poems",
+        "author": "Samuel Taylor Coleridge",
+        "language": "en",
+        "year": 2004,
+        "score": 7.0716700056320985
+      },
+      {
+        "book_id": 65766,
+        "title": "An Observer in the Near East",
+        "author": "William Le Queux",
+        "language": "en",
+        "year": 2021,
+        "score": 6.600225338589959
+      },
+      {
+        "book_id": 641,
+        "title": "The Violet Fairy Book",
+        "author": "Andrew Lang",
+        "language": "en",
+        "year": 1996,
+        "score": 6.364503005068888
+      },
+      {
+        "book_id": 30827,
+        "title": "The Count's Chauffeur",
+        "author": "William Le Queux",
+        "language": "en",
+        "year": 2010,
+        "score": 6.364503005068888
+      },
+      {
+        "book_id": 44896,
+        "title": "The Autobiography of Parley Parker Pratt",
+        "author": "Parley P. Pratt",
+        "language": "en",
+        "year": 2014,
+        "score": 6.128780671547818
+      },
+      {
+        "book_id": 45868,
+        "title": "Buffon's Natural History. Volume 10 (of 10)",
+        "author": "comte de Georges Louis Leclerc Buffon",
+        "language": "en",
+        "year": 2014,
+        "score": 5.421613670984609
+      },
+      {
+        "book_id": 40529,
+        "title": "The Complete Works of Nathaniel Hawthorne, Appendix to Volume XII: Tales, Sketches, and other Papers by Nathaniel Hawthorne with a Biographical Sketch by George Parsons Lathrop",
+        "author": "George Parsons Lathrop",
+        "language": "en",
+        "year": 2012,
+        "score": 5.185891337463539
+      },
+      {
+        "book_id": 20541,
+        "title": "The rocky island, and other similitudes",
+        "author": "Samuel Wilberforce",
+        "language": "en",
+        "year": 2007,
+        "score": 4.714446670421399
+      },
+      {
+        "book_id": 50426,
+        "title": "My Memoirs, Vol. III, 1826 to 1830",
+        "author": "Alexandre Dumas",
+        "language": "en",
+        "year": 2015,
+        "score": 4.478724336900329
+      },
+      {
+        "book_id": 54140,
+        "title": "The Exeter Road: the story of the west of England highway",
+        "author": "Charles G. Harper",
+        "language": "en",
+        "year": 2017,
+        "score": 3.771557336337119
+      },
+      {
+        "book_id": 59970,
+        "title": "The Life of Joseph Smith, the Prophet",
+        "author": "George Q. Cannon",
+        "language": "en",
+        "year": 2019,
+        "score": 3.771557336337119
+      },
+      {
+        "book_id": 60919,
+        "title": "With Axe and Rope in the New Zealand Alps",
+        "author": "George Edward Mannering",
+        "language": "en",
+        "year": 2019,
+        "score": 3.771557336337119
+      },
+      {
+        "book_id": 67147,
+        "title": "The King Who Went on Strike",
+        "author": "Pearson Choate",
+        "language": "en",
+        "year": 2022,
+        "score": 3.771557336337119
+      },
+      {
+        "book_id": 10448,
+        "title": "The Anti-Slavery Harp: A Collection of Songs for Anti-Slavery Meetings",
+        "author": null,
+        "language": "en",
+        "year": 2003,
+        "score": 3.5358350028160492
+      },
+      {
+        "book_id": 44596,
+        "title": "Harper's Young People, December 28, 1880",
+        "author": "Various",
+        "language": "en",
+        "year": 2014,
+        "score": 3.5358350028160492
+      },
+      {
+        "book_id": 3079,
+        "title": "Original Short Stories — Volume 03",
+        "author": "Guy de Maupassant",
+        "language": "en",
+        "year": 2004,
+        "score": 3.3001126692949794
+      },
+      {
+        "book_id": 25299,
+        "title": "Wood Magic: A Fable",
+        "author": "Richard Jefferies",
+        "language": "en",
+        "year": 2008,
+        "score": 2.5929456687317693
+      },
+      {
+        "book_id": 46970,
+        "title": "Best Stories from the Best Book: An Illustrated Bible Companion for the Home",
+        "author": "James Edson White",
+        "language": "en",
+        "year": 2014,
+        "score": 2.5929456687317693
+      },
+      {
+        "book_id": 16055,
+        "title": "Shakespeare and Precious Stones",
+        "author": "George Frederick Kunz",
+        "language": "en",
+        "year": 2005,
+        "score": 2.3572233352106995
+      },
+      {
+        "book_id": 10855,
+        "title": "Is Mars habitable? A critical examination of Professor Percival Lowell's book \"Mars and its canals,\" with an alternative explanation",
+        "author": "Alfred Russel Wallace",
+        "language": "en",
+        "year": 2004,
+        "score": 2.1215010016896296
+      },
+      {
+        "book_id": 50286,
+        "title": "The Wicker Work Woman: A Chronicle of Our Own Times",
+        "author": "Anatole France",
+        "language": "en",
+        "year": 2015,
+        "score": 1.8857786681685595
+      },
+      {
+        "book_id": 55974,
+        "title": "Anthropophagy",
+        "author": "Charles W. Darling",
+        "language": "en",
+        "year": 2017,
+        "score": 1.8857786681685595
+      },
+      {
+        "book_id": 41397,
+        "title": "Uncle Walt [Walt Mason], the Poet Philosopher",
+        "author": "Walt Mason",
+        "language": "en",
+        "year": 2012,
+        "score": 1.6500563346474897
+      },
+      {
+        "book_id": 57189,
+        "title": "The Philippine Islands, 1493-1898; Volume 50",
+        "author": null,
+        "language": "en",
+        "year": 2018,
+        "score": 1.6500563346474897
+      },
+      {
+        "book_id": 709,
+        "title": "The Princess and Curdie",
+        "author": "George MacDonald",
+        "language": "en",
+        "year": 1996,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 1153,
+        "title": "The Chessmen of Mars",
+        "author": "Edgar Rice Burroughs",
+        "language": "en",
+        "year": 1998,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 6771,
+        "title": "The Thirty Years War — Volume 02",
+        "author": "Friedrich Schiller",
+        "language": "en",
+        "year": 2004,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 6988,
+        "title": "History of the Ottawa and Chippewa Indians of Michigan",
+        "author": "Andrew J. Blackbird",
+        "language": "en",
+        "year": 2004,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 31179,
+        "title": "Fulton's \"Steam Battery\": Blockship and Catamaran",
+        "author": "Howard Irving Chapelle",
+        "language": "en",
+        "year": 2010,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 33292,
+        "title": "Punch or the London Charivari, Vol. 98 June 7, 1890",
+        "author": "Various",
+        "language": "en",
+        "year": 2010,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 40384,
+        "title": "Musical Myths and Facts, Volume 2 (of 2)",
+        "author": "Carl Engel",
+        "language": "en",
+        "year": 2012,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 45077,
+        "title": "Pubs: A Collection of Hotel, Inn, and Tavern Signs in Great Britain and Ireland",
+        "author": null,
+        "language": "en",
+        "year": 2014,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 47023,
+        "title": "The Putnam Hall Champions; or, Bound to Win Out",
+        "author": "Edward Stratemeyer",
+        "language": "en",
+        "year": 2014,
+        "score": 1.4143340011264196
+      },
+      {
+        "book_id": 1782,
+        "title": "King Henry IV, Part 2",
+        "author": "William Shakespeare",
+        "language": "en",
+        "year": 1999,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 2997,
+        "title": "Time's Laughingstocks, and Other Verses",
+        "author": "Thomas Hardy",
+        "language": "en",
+        "year": 2001,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 5040,
+        "title": "State of the Union Addresses",
+        "author": "Dwight D. Eisenhower",
+        "language": "en",
+        "year": 2004,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 6781,
+        "title": "The Ghost-Seer; or the Apparitionist; and Sport of Destiny",
+        "author": "Friedrich Schiller",
+        "language": "en",
+        "year": 2004,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 13831,
+        "title": "Evolution Of The Japanese, Social And Psychic",
+        "author": "Sidney Lewis Gulick",
+        "language": "en",
+        "year": 2004,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 18859,
+        "title": "Cross Purposes and The Shadows",
+        "author": "George MacDonald",
+        "language": "en",
+        "year": 2006,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 22511,
+        "title": "Rollo on the Rhine",
+        "author": "Jacob Abbott",
+        "language": "en",
+        "year": 2007,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 44085,
+        "title": "Psychoanalysis, Sleep and Dreams",
+        "author": "André Tridon",
+        "language": "en",
+        "year": 2013,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 54575,
+        "title": "Redcoat Captain: A Story of That Country",
+        "author": "Alfred Ollivant",
+        "language": "en",
+        "year": 2017,
+        "score": 1.1786116676053497
+      },
+      {
+        "book_id": 5697,
+        "title": "Tales of Chinatown",
+        "author": "Sax Rohmer",
+        "language": "en",
+        "year": 2004,
+        "score": 0.9428893340842798
+      },
+      {
+        "book_id": 29117,
+        "title": "Bygone Punishments",
+        "author": "William Andrews",
+        "language": "en",
+        "year": 2009,
+        "score": 0.9428893340842798
+      },
+      {
+        "book_id": 53815,
+        "title": "Elizabeth Ann's Houseboat",
+        "author": "Josephine Lawrence",
+        "language": "en",
+        "year": 2016,
+        "score": 0.9428893340842798
+      },
+      {
+        "book_id": 56029,
+        "title": "\"Erb\"",
+        "author": "W. Pett Ridge",
+        "language": "en",
+        "year": 2017,
+        "score": 0.9428893340842798
+      },
+      {
+        "book_id": 14939,
+        "title": "Punch, or the London Charivari, Volume 1, December 4, 1841",
+        "author": "Various",
+        "language": "en",
+        "year": 2005,
+        "score": 0.7071670005632098
+      },
+      {
+        "book_id": 40266,
+        "title": "The Punster's Pocket-book",
+        "author": "C. M. Westmacott",
+        "language": "en",
+        "year": 2012,
+        "score": 0.7071670005632098
+      },
+      {
+        "book_id": 6684,
+        "title": "Uneasy Money",
+        "author": "P. G. Wodehouse",
+        "language": "en",
+        "year": 2004,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 20111,
+        "title": "With Those Who Wait",
+        "author": "Frances Wilson Huard",
+        "language": "en",
+        "year": 2006,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 30003,
+        "title": "Law and Laughter",
+        "author": "George A. Morton D. Macleod Malloch",
+        "language": "en",
+        "year": 2009,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 35649,
+        "title": "The Lost Mountain: A Tale of Sonora",
+        "author": "Mayne Reid",
+        "language": "en",
+        "year": 2011,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 41621,
+        "title": "Watteau",
+        "author": "C. Lewis Hind",
+        "language": "en",
+        "year": 2012,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 43525,
+        "title": "Mediæval London",
+        "author": "William Benham Charles Welch",
+        "language": "en",
+        "year": 2013,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 51943,
+        "title": "The Golden Flood",
+        "author": "Edwin Lefevre",
+        "language": "en",
+        "year": 2016,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 59333,
+        "title": "Harold's Bride: A Tale",
+        "author": "A. L. O. E.",
+        "language": "en",
+        "year": 2019,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 59727,
+        "title": "An Old City Company: A Sketch of the History and Conditions of the Skinners' Company of London",
+        "author": "Lewis Boyd Sebastian",
+        "language": "en",
+        "year": 2019,
+        "score": 0.4714446670421399
+      },
+      {
+        "book_id": 9310,
+        "title": "Casanova's Homecoming",
+        "author": "Arthur Schnitzler",
+        "language": "en",
+        "year": 2005,
+        "score": 0.23572233352106994
+      },
+      {
+        "book_id": 14474,
+        "title": "The Chemical History of a Candle",
+        "author": "Michael Faraday",
+        "language": "en",
+        "year": 2004,
+        "score": 0.23572233352106994
+      },
+      {
+        "book_id": 26798,
+        "title": "The Genus Pinus",
+        "author": "George Russell Shaw",
+        "language": "en",
+        "year": 2008,
+        "score": 0.23572233352106994
+      },
+      {
+        "book_id": 36113,
+        "title": "Christian Sects in the Nineteenth Century",
+        "author": "Caroline Frances Cornwallis",
+        "language": "en",
+        "year": 2011,
+        "score": 0.23572233352106994
+      },
+      {
+        "book_id": 44836,
+        "title": "Punch or the London Charivari, Vol. 109, August 17, 1895",
+        "author": "Various",
+        "language": "en",
+        "year": 2014,
+        "score": 0.23572233352106994
+      },
+      {
+        "book_id": 47842,
+        "title": "Queen Moo's Talisman: The Fall of the Maya Empire",
+        "author": "Alice D. Le Plongeon",
+        "language": "en",
+        "year": 2015,
+        "score": 0.23572233352106994
+      },
+      {
+        "book_id": 48372,
+        "title": "A Canadian Farm Mystery; Or, Pam the Pioneer",
+        "author": "Bessie Marchant",
+        "language": "en",
+        "year": 2015,
+        "score": 0.23572233352106994
+      },
+      {
+        "book_id": 66855,
+        "title": "Why We Love Music",
+        "author": "Carl E. Seashore",
+        "language": "en",
+        "year": 2021,
+        "score": 0.23572233352106994
+      }
+    ]
+  }
+}

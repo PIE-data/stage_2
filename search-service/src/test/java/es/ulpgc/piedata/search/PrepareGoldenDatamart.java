@@ -20,9 +20,15 @@ public final class PrepareGoldenDatamart {
     public static void main(String[] args) throws Exception {
         Path root = findProjectRoot();
         Path golden = root.resolve("spec/golden");
-        Path dataDir = root.resolve(
-                "search-service/target/golden-demo/data"
-        );
+        if (args.length > 1) {
+            throw new IllegalArgumentException(
+                    "Usage: PrepareGoldenDatamart [data-directory]"
+            );
+        }
+
+        Path dataDir = args.length == 1
+                ? Path.of(args[0]).toAbsolutePath().normalize()
+                : root.resolve("search-service/target/golden-demo/data");
         Path databaseFile = dataDir.resolve("datamarts/datamart.db");
 
         if (Files.exists(databaseFile)) {

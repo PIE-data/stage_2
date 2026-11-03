@@ -1,0 +1,7 @@
+{
+  "epoch_s": 1793735156.8455322,
+  "name": "indexing-2",
+  "pid": 2821,
+  "books_indexed_before_signal": 70,
+  "signal": "SIGKILL"
+}
