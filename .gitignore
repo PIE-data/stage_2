@@ -4,6 +4,8 @@ target/
 # Runtime data (datalake, datamarts, broker store, logs) - never committed
 data/
 logs/
+# KahaDB/scheduler store created when the broker runs from its module folder
+activemq-data/
 
 # IDE
 .idea/

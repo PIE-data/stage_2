@@ -85,6 +85,14 @@ receive  →  do the work  →  commit storage (files / SQLite)  →  send the n
 Because the output message is sent in the **same transaction** that acknowledges the input,
 "work done but next message never sent" cannot happen for consumers.
 
+**Indexing consumes in batches** (`BatchTransactedConsumer`, `IndexConsumer`): one transaction
+holds up to `consumer.batch-size` messages (default 20), or fewer if no message arrives within
+`consumer.batch-wait-ms` (default 200 ms). The whole batch is written with one datamart
+transaction (`IndexingService.updateAll`), then one `BookIndexed` per distinct book is sent and
+the session is committed; any error rolls back the batch. After a failed batch, the redelivered
+messages are processed **one per transaction**, so a bad message ends alone in `ActiveMQ.DLQ`
+and the good ones of its batch are indexed normally.
+
 The only producer outside a consumer transaction is `POST /ingest/{id}` (HTTP request, no input
 message). It publishes to `ingest.requests` and returns `202 Accepted`; the actual ingestion then
 follows the normal consumer path above, so the same guarantees apply.

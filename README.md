@@ -41,6 +41,7 @@ against `spec/golden/metadata_20.jsonl` by `GoldenMetadataTest`; the datamart wr
 | `indexing-service` | Builds the inverted index and the metadata datamart | 7002 | #4 |
 | `search-service` | Front-end search API | 7003 | #5 |
 | `feeder` | Decides which books to ingest | 7004 | #2 |
+| `bench-client` | Load generator for the integration benchmarks, not deployed (`docs/INTEGRATION_BENCHMARK.md`) | – | #8 |
 
 ## Build and test
 
