@@ -1,0 +1,1 @@
+{"ingest.requests":{"depth":0,"average_time_ms":361.75,"inflight":0,"dequeued":20,"enqueued":20},"books.downloaded":{"depth":0,"average_time_ms":45.2,"inflight":0,"dequeued":20,"enqueued":20},"ActiveMQ.DLQ":{"depth":0,"average_time_ms":0.0,"inflight":0,"dequeued":0,"enqueued":0}}

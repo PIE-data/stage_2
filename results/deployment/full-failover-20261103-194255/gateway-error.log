@@ -1,0 +1,12 @@
+2026/11/03 19:44:28 [notice] 3003#3003: using the "epoll" event method
+2026/11/03 19:44:28 [notice] 3003#3003: nginx/1.24.0 (Ubuntu)
+2026/11/03 19:44:28 [notice] 3003#3003: OS: Linux 6.6.87.2-microsoft-standard-WSL2
+2026/11/03 19:44:28 [notice] 3003#3003: getrlimit(RLIMIT_NOFILE): 10240:1048576
+2026/11/03 19:44:28 [notice] 3003#3003: start worker processes
+2026/11/03 19:44:28 [notice] 3003#3003: start worker process 3004
+2026/11/03 19:47:40 [notice] 3003#3003: signal 15 (SIGTERM) received from 3134, exiting
+2026/11/03 19:47:40 [notice] 3004#3004: exiting
+2026/11/03 19:47:40 [notice] 3004#3004: exit
+2026/11/03 19:47:40 [notice] 3003#3003: signal 17 (SIGCHLD) received from 3004
+2026/11/03 19:47:40 [notice] 3003#3003: worker process 3004 exited with code 0
+2026/11/03 19:47:40 [notice] 3003#3003: exit

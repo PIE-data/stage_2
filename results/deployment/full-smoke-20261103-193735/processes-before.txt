@@ -1,0 +1,9 @@
+broker 1996 running
+ingestion-1 2039 running
+ingestion-2 2098 running
+indexing-1 2151 running
+indexing-2 2202 running
+search-1 2253 running
+search-2 2294 running
+feeder 2335 running
+gateway 2384 running

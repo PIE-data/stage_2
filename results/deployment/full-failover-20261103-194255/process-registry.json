@@ -1,0 +1,65 @@
+[
+  {
+    "name": "broker",
+    "pid": 2615,
+    "start": "148010",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/broker.log"
+  },
+  {
+    "name": "ingestion-1",
+    "pid": 2657,
+    "start": "148179",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/ingestion-1.log"
+  },
+  {
+    "name": "ingestion-2",
+    "pid": 2716,
+    "start": "148326",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/ingestion-2.log"
+  },
+  {
+    "name": "indexing-1",
+    "pid": 2770,
+    "start": "148487",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/indexing-1.log"
+  },
+  {
+    "name": "indexing-2",
+    "pid": 2821,
+    "start": "148631",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/indexing-2.log"
+  },
+  {
+    "name": "search-1",
+    "pid": 2872,
+    "start": "148772",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/search-1.log"
+  },
+  {
+    "name": "search-2",
+    "pid": 2913,
+    "start": "148903",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/search-2.log"
+  },
+  {
+    "name": "feeder",
+    "pid": 2954,
+    "start": "149020",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/feeder.log"
+  },
+  {
+    "name": "gateway",
+    "pid": 3003,
+    "start": "149154",
+    "boot": "e2621305-0b0d-4deb-b200-eee2f1c3c7a3",
+    "log": "/home/ivan/bench/s2-full-failover.20xqbi/run/logs/20261103-194417/gateway.log"
+  }
+]

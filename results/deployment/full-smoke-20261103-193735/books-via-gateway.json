@@ -1,0 +1,202 @@
+[
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 641,
+      "title": "The Violet Fairy Book",
+      "author": "Andrew Lang",
+      "language": "en",
+      "year": 1996
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 709,
+      "title": "The Princess and Curdie",
+      "author": "George MacDonald",
+      "language": "en",
+      "year": 1996
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 1153,
+      "title": "The Chessmen of Mars",
+      "author": "Edgar Rice Burroughs",
+      "language": "en",
+      "year": 1998
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 1782,
+      "title": "King Henry IV, Part 2",
+      "author": "William Shakespeare",
+      "language": "en",
+      "year": 1999
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 2997,
+      "title": "Time's Laughingstocks, and Other Verses",
+      "author": "Thomas Hardy",
+      "language": "en",
+      "year": 2001
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 3079,
+      "title": "Original Short Stories — Volume 03",
+      "author": "Guy de Maupassant",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 3181,
+      "title": "The Stolen White Elephant",
+      "author": "Mark Twain",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 5040,
+      "title": "State of the Union Addresses",
+      "author": "Dwight D. Eisenhower",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 5429,
+      "title": "Preface to Shakespeare",
+      "author": "Samuel Johnson",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 5697,
+      "title": "Tales of Chinatown",
+      "author": "Sax Rohmer",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 5970,
+      "title": "Lovey Mary",
+      "author": "Alice Caldwell Hegan Rice",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 6684,
+      "title": "Uneasy Money",
+      "author": "P. G. Wodehouse",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 6692,
+      "title": "The Swiss Family Robinson, Told in Words of One Syllable",
+      "author": "Lucy Aikin Johann David Wyss",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 6771,
+      "title": "The Thirty Years War — Volume 02",
+      "author": "Friedrich Schiller",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 6781,
+      "title": "The Ghost-Seer; or the Apparitionist; and Sport of Destiny",
+      "author": "Friedrich Schiller",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 6988,
+      "title": "History of the Ottawa and Chippewa Indians of Michigan",
+      "author": "Andrew J. Blackbird",
+      "language": "en",
+      "year": 2004
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 8324,
+      "title": "The Bible, Douay-Rheims, Book 24: Canticle of Canticles",
+      "author": null,
+      "language": "en",
+      "year": 2005
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 8884,
+      "title": "Travels in Syria and the Holy Land",
+      "author": "John Lewis Burckhardt",
+      "language": "en",
+      "year": 2005
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7013",
+    "book": {
+      "book_id": 9188,
+      "title": "Aboriginal American Authors",
+      "author": "Daniel G. Brinton",
+      "language": "en",
+      "year": 2005
+    }
+  },
+  {
+    "upstream": "127.0.0.1:7003",
+    "book": {
+      "book_id": 9310,
+      "title": "Casanova's Homecoming",
+      "author": "Arthur Schnitzler",
+      "language": "en",
+      "year": 2005
+    }
+  }
+]

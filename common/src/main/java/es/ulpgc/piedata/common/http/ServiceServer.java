@@ -64,7 +64,7 @@ public final class ServiceServer {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("service", service);
             body.put("status", "running");
-            body.put("port", ctx.port());
+            body.put("port", app.port());
             body.put("threads_min", minThreads);
             body.put("threads_max", maxThreads);
             body.put("uptime_s", Duration.between(startedAt, Instant.now()).toSeconds());
