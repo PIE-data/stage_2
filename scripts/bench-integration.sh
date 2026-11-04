@@ -72,7 +72,9 @@ start() {   # $1 = full | search, $2 = run folder
 
 stop() {
     [ "$DRY_RUN" = 1 ] && { echo "  + stop-all"; return; }
-    [ -f "$CFG" ] && bash scripts/stop-all.sh --config "$CFG" > /dev/null 2>&1 || true
+    [ -f "$CFG" ] || return 0
+    bash scripts/stop-all.sh --config "$CFG" > "$BENCH_WORK/stop-all.log" 2>&1 \
+        || log "WARNING: stop failed, see $BENCH_WORK/stop-all.log"
 }
 
 monitor_start() {   # CPU/memory per process and host, once per second, until monitor_stop
@@ -324,6 +326,9 @@ if d < float(sys.argv[2]): print(f"  CHECK FAILED: the re-index lasted {d} s, le
 
 for e in "${EXPERIMENTS[@]}"; do
     case "$e" in S1|S2|I1|I2|I3|P1|X1) ;; *) echo "unknown experiment '$e' (S1 S2 I1 I2 I3 P1 X1)"; exit 2 ;; esac
+done
+for tool in java nginx curl python3; do
+    command -v "$tool" > /dev/null || { echo "missing '$tool' (e.g. sudo apt install -y nginx)"; exit 1; }
 done
 [ -f "$CLIENT" ] || { echo "missing $CLIENT: run mvn verify first"; exit 1; }
 [ -d "$BENCH_DATA/datalake" ] && [ -d "$BENCH_DATA/control" ] \

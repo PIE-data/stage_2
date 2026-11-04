@@ -74,4 +74,20 @@ class LifecycleTests(unittest.TestCase):
                             launch.assert_not_called()
                         self.assertFalse(registry.exists())
 
+    def test_port_check_ignores_time_wait_but_not_listeners(self):
+        import http.server, socket, threading, urllib.request
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200); self.end_headers(); self.wfile.write(b'{}')
+            def log_message(self, *args): pass
+        server=http.server.HTTPServer(('0.0.0.0',0),Handler); port=server.server_address[1]
+        thread=threading.Thread(target=server.serve_forever); thread.start()
+        urllib.request.urlopen(f'http://127.0.0.1:{port}/status').read()   # like a readiness check
+        server.shutdown(); server.server_close(); thread.join()
+        m.ensure_free(port)                    # only TIME_WAIT left: the port can be reused
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+            listener.bind(('0.0.0.0',port)); listener.listen()
+            with self.assertRaises(OSError): m.ensure_free(port)
+
 if __name__=='__main__': unittest.main()
