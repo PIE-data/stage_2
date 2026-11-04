@@ -26,9 +26,15 @@ import java.util.concurrent.CountDownLatch;
  */
 final class SearchLoad {
 
-    /** One measured request. */
-    record Sample(long startMs, double latencyMs, int status) {
+    /** One measured request; {@code total} = matching books reported by Search, -1 if unknown. */
+    record Sample(long startMs, double latencyMs, int status, int total) {
     }
+
+    /** HTTP status (-1 = network error or timeout) and the {@code total} field of the response. */
+    record Reply(int status, int total) {
+    }
+
+    private static final java.util.regex.Pattern TOTAL = java.util.regex.Pattern.compile("\"total\"\\s*:\\s*(\\d+)");
 
     private SearchLoad() {
     }
@@ -67,10 +73,11 @@ final class SearchLoad {
                     while (System.nanoTime() < end) {
                         URI uri = uris.get(i++ % uris.size());
                         long s = System.nanoTime();
-                        int status = send(http, uri);
+                        Reply reply = send(http, uri);
                         long e = System.nanoTime();
                         if (s >= measureFrom && e <= end) {
-                            samples.add(new Sample((s - measureFrom) / 1_000_000, (e - s) / 1e6, status));
+                            samples.add(new Sample((s - measureFrom) / 1_000_000, (e - s) / 1e6,
+                                    reply.status(), reply.total()));
                         }
                     }
                 } finally {
@@ -93,28 +100,41 @@ final class SearchLoad {
         summary.put("errors", errors);
         summary.put("throughput_qps", Stats.r(ok.length / (double) durationS));
         summary.put("latency_ms", Stats.of(ok).toMap());
+        // a search on a missing datamart also answers 200 with total 0: these show it
+        List<Sample> answered = list.stream().filter(x -> x.status() == 200).toList();
+        summary.put("empty_results", answered.stream().filter(x -> x.total() == 0).count());
+        summary.put("results_total", Stats.of(answered.stream().filter(x -> x.total() >= 0)
+                .mapToDouble(Sample::total).toArray()).toMap());
 
         List<String> rows = new ArrayList<>();
         for (Sample s : list) {
-            rows.add(s.startMs() + "," + String.format(java.util.Locale.ROOT, "%.3f", s.latencyMs()) + "," + s.status());
+            rows.add(s.startMs() + "," + String.format(java.util.Locale.ROOT, "%.3f", s.latencyMs()) + ","
+                    + s.status() + "," + s.total());
         }
-        out.csv("requests.csv", "start_ms,latency_ms,status", rows);
+        out.csv("requests.csv", "start_ms,latency_ms,status,total", rows);
         out.csv("timeline.csv", "second,requests,errors,p95_ms", timeline(list, durationS));
         out.json("summary.json", summary);
         return summary;
     }
 
-    /** -1 for a network error or timeout (counted as an error). */
-    private static int send(HttpClient http, URI uri) {
+    /** Status -1 for a network error or timeout (counted as an error). */
+    private static Reply send(HttpClient http, URI uri) {
         try {
             HttpRequest req = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(30)).GET().build();
-            return http.send(req, HttpResponse.BodyHandlers.discarding()).statusCode();
+            HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());
+            return new Reply(r.statusCode(), total(r.body()));
         } catch (IOException e) {
-            return -1;
+            return new Reply(-1, -1);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return -1;
+            return new Reply(-1, -1);
         }
+    }
+
+    /** The {@code total} of a Search response, read without parsing the whole JSON; -1 if absent. */
+    static int total(String body) {
+        java.util.regex.Matcher m = TOTAL.matcher(body);
+        return m.find() ? Integer.parseInt(m.group(1)) : -1;
     }
 
     static List<String> timeline(List<Sample> samples, int durationS) {

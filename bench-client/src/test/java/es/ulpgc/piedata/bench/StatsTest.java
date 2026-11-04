@@ -53,6 +53,13 @@ class StatsTest {
     }
 
     @Test
+    void totalIsReadFromSearchResponses() {
+        assertEquals(823, SearchLoad.total("{\"query\":\"sea\",\"filters\":{},\"total\":823,\"offset\":0}"));
+        assertEquals(0, SearchLoad.total("{\"total\": 0}"));
+        assertEquals(-1, SearchLoad.total("{\"error\":\"x\"}"));
+    }
+
+    @Test
     void ingestionThroughputFromBrokerSamples() {
         List<String> rows = List.of(
                 "0,books.downloaded,0,10,10,0,1.0",
