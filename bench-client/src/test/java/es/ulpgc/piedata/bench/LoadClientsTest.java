@@ -82,7 +82,14 @@ class LoadClientsTest {
 
     @Test
     void searchLoadMeasuresLatencyAndCountsErrors() throws Exception {
-        http.createContext("/search", ex -> reply(ex, ex.getRequestURI().getQuery().contains("q=bad") ? 500 : 200, "{}"));
+        http.createContext("/search", ex -> {
+            String q = ex.getRequestURI().getQuery();
+            if (q.contains("q=bad")) {
+                reply(ex, 500, "{}");
+            } else {
+                reply(ex, 200, "{\"query\":\"x\",\"total\": " + (q.contains("q=love") ? 0 : 3) + ",\"results\":[]}");
+            }
+        });
         Path queries = dir.resolve("queries.txt");
         Files.writeString(queries, "# test\nlove\nbad\nwhite whale\n");
         Path out = dir.resolve("search");
@@ -96,6 +103,9 @@ class LoadClientsTest {
         assertTrue(errors > 0 && errors < requests, "one query in three fails: " + s);
         assertEquals("t", s.get("label").getAsString());
         assertTrue(s.getAsJsonObject("latency_ms").get("p95").getAsDouble() > 0);
+        long empty = s.get("empty_results").getAsLong();
+        assertTrue(empty > 0 && empty < requests - errors, "one query in three has 0 results: " + s);
+        assertEquals(3.0, s.getAsJsonObject("results_total").get("max").getAsDouble());
         assertEquals(requests + 1, Files.readAllLines(out.resolve("requests.csv")).size());
         assertEquals(2 + 1, Files.readAllLines(out.resolve("timeline.csv")).size());
     }

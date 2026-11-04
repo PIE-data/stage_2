@@ -213,7 +213,7 @@ final class PipelineLoad {
         m.put("submit_duration_s", Stats.r(submitEndMs / 1000.0 - firstSubmit / 1000.0));
         m.put("duration_s", Stats.r(spanS));
         m.put("throughput_books_s", Stats.r(indexed / spanS));
-        m.put("time_per_book_s", Stats.r(spanS / indexed));
+        m.put("time_per_book_ms", Stats.r(spanS * 1000 / indexed));
         m.put("latency_ms", Stats.of(lat.stream().mapToDouble(Double::doubleValue).toArray()).toMap());
         return m;
     }

@@ -2,7 +2,7 @@
 # Integration benchmarks (#8, docs/INTEGRATION_BENCHMARK.md section 3), run one after the other
 # with the deployment scripts of #7 and the measurement client (bench-client).
 #
-#   bash scripts/bench-integration.sh                 # every experiment: S1 S2 I1 I2 I3 P1 X1
+#   bash scripts/bench-integration.sh                 # every experiment: S1 S2 I1 I2 I3 I4 P1 X1
 #   bash scripts/bench-integration.sh S1 I1           # only some of them
 #   RUNS=1 DURATION=20 bash scripts/bench-integration.sh S1   # quick trial (not for the report)
 #
@@ -12,7 +12,8 @@
 #   STAGE1      Stage 1 repo with the Gutenberg mirror (for P1) [~/bench/stage_1]
 #   OUT         results folder                                  [results/integration/<date-time>]
 #   RUNS=3  WARMUP=10  DURATION=60  (search: seconds not measured / measured)
-#   S1_LEVELS="1 2 4 8 16 32"   S2_LEVELS="16 32"   X1_CONCURRENCY=16   X1_DURATION=30
+#   S1_LEVELS="1 2 4 8 16 32"   S2_LEVELS="16 32"   I4_RATES="2 5 10"   I4_BOOKS=200
+#   X1_CONCURRENCY=16   X1_DURATION=30
 #   TIMEOUT=1800 (seconds to wait for every BookIndexed)
 #   DRY_RUN=1   prints the commands instead of running them
 #
@@ -33,11 +34,13 @@ DURATION="${DURATION:-60}"
 S1_LEVELS="${S1_LEVELS:-1 2 4 8 16 32}"
 S2_LEVELS="${S2_LEVELS:-16 32}"
 X1_CONCURRENCY="${X1_CONCURRENCY:-16}"
+I4_RATES="${I4_RATES:-2 5 10}"     # books/s, below the batch-20 throughput (~16 books/s)
+I4_BOOKS="${I4_BOOKS:-200}"
 X1_DURATION="${X1_DURATION:-30}"     # must fit inside the re-index (~1 min for 1000 books)
 TIMEOUT="${TIMEOUT:-1800}"
 DRY_RUN="${DRY_RUN:-0}"
 EXPERIMENTS=("$@")
-[ ${#EXPERIMENTS[@]} -gt 0 ] || EXPERIMENTS=(S1 S2 I1 I2 I3 P1 X1)
+[ ${#EXPERIMENTS[@]} -gt 0 ] || EXPERIMENTS=(S1 S2 I1 I2 I3 I4 P1 X1)
 
 CLIENT="$ROOT/bench-client/target/bench-client.jar"
 IDS="$ROOT/bench/ids-tier1000.txt"
@@ -139,7 +142,14 @@ new_run() {   # $1 = experiment/configuration, $2 = k; prints the run folder
     echo "$dir"
 }
 
-client() { run java -jar "$CLIENT" "$@" > /dev/null; }
+# Runs bench-client; its log lines (ActiveMQ, warnings) go to client.log in the run folder.
+client() {
+    local out="" prev=""
+    for a in "$@"; do [ "$prev" = --out ] && out="$a"; prev="$a"; done
+    [ "$DRY_RUN" = 1 ] && { echo "  + bench-client $*"; return; }
+    java -jar "$CLIENT" "$@" > /dev/null 2>> "$out/client.log" \
+        || { log "ERROR: bench-client failed, see $out/client.log"; tail -5 "$out/client.log"; exit 1; }
+}
 
 # Prints a warning when a run should not be kept (brief: correct results before performance).
 check() {
@@ -154,9 +164,16 @@ for key in ("missing", "errors"):
 dlq = s.get("broker", {}).get("ActiveMQ.DLQ", {}).get("enqueued_during_run")
 if dlq:
     problems.append(f"DLQ enqueued={dlq}")
+if s.get("kind") == "search" and s.get("requests") and s.get("empty_results", 0) >= s["requests"] - s.get("errors", 0):
+    problems.append("every query returned 0 results (datamart missing or empty?)")
 if s.get("skipped_already_ingested"):
     problems.append(f"skipped={s['skipped_already_ingested']} (datalake not empty)")
-print(("  CHECK FAILED: " + ", ".join(problems) + "  -> " + sys.argv[1]) if problems else "  check ok")
+info = ""
+if s.get("kind") == "search":
+    info = f" (qps {s.get('throughput_qps')}, p95 {s['latency_ms'].get('p95')} ms, empty {s.get('empty_results')}/{s.get('requests')})"
+elif "throughput_books_s" in s:
+    info = f" ({s['throughput_books_s']} books/s, latency p95 {s['latency_ms'].get('p95')} ms)"
+print(("  CHECK FAILED: " + ", ".join(problems) + "  -> " + sys.argv[1]) if problems else "  check ok" + info)
 EOF
 }
 
@@ -164,6 +181,14 @@ measure_search() {   # $1 run folder, $2 url, $3 concurrency, $4 label
     monitor_start "$1"
     client search --url "$2" --queries "$QUERIES" --concurrency "$3" --warmup "$WARMUP" \
         --duration "$DURATION" --out "$1" --label "$4"
+    monitor_stop
+    check "$1"
+}
+
+measure_index_paced() {   # $1 run folder, $2 label; uses $rate and I4_BOOKS
+    monitor_start "$1"
+    client index-only --data-dir "$DATA" --broker-http "$BROKER_HTTP" --timeout "$TIMEOUT" \
+        --rate "$rate" --count "$I4_BOOKS" --out "$1" --label "$2"
     monitor_stop
     check "$1"
 }
@@ -220,6 +245,12 @@ I1() {   # indexing batch size
 I2() {   # consumer sessions per indexing replica
     for t in 1 2 4; do
         one_run "I2/t$t" "I2-t$t" full empty measure_index_only "INDEXING_CONSUMER_THREADS=$t"
+    done
+}
+
+I4() {   # per-book indexing latency BELOW saturation: books sent at a fixed rate, not all at once
+    for rate in $I4_RATES; do
+        one_run "I4/rate$rate" "I4-rate$rate" full empty measure_index_paced "INDEXING_BATCH_SIZE=20"
     done
 }
 
@@ -304,7 +335,7 @@ X1() {   # search while indexing: same concurrency, idle vs during a re-index of
             echo "  + (background) index-only -> $idx"
         else
             java -jar "$CLIENT" index-only --data-dir "$DATA" --broker-http "$BROKER_HTTP" \
-                --timeout "$TIMEOUT" --out "$idx" --label "X1-indexing-load" > /dev/null &
+                --timeout "$TIMEOUT" --out "$idx" --label "X1-indexing-load" > /dev/null 2> "$idx/client.log" &
         fi
         local loader="${!:-}"
         client search --url http://127.0.0.1:7003 --queries "$QUERIES" --concurrency "$CONC" \
@@ -325,7 +356,7 @@ if d < float(sys.argv[2]): print(f"  CHECK FAILED: the re-index lasted {d} s, le
 # --- main ---------------------------------------------------------------------------------------
 
 for e in "${EXPERIMENTS[@]}"; do
-    case "$e" in S1|S2|I1|I2|I3|P1|X1) ;; *) echo "unknown experiment '$e' (S1 S2 I1 I2 I3 P1 X1)"; exit 2 ;; esac
+    case "$e" in S1|S2|I1|I2|I3|I4|P1|X1) ;; *) echo "unknown experiment '$e' (S1 S2 I1 I2 I3 I4 P1 X1)"; exit 2 ;; esac
 done
 for tool in java nginx curl python3; do
     command -v "$tool" > /dev/null || { echo "missing '$tool' (e.g. sudo apt install -y nginx)"; exit 1; }
@@ -358,5 +389,5 @@ for e in "${EXPERIMENTS[@]}"; do
     "$e"
 done
 
-run java -jar "$CLIENT" aggregate --runs "$OUT" --out "$OUT/aggregate.csv" > /dev/null
+run java -jar "$CLIENT" aggregate --runs "$OUT" --out "$OUT/aggregate.csv" > /dev/null 2> "$OUT/aggregate.log"
 log "Done: $OUT/aggregate.csv"

@@ -9,7 +9,7 @@ and threading), §6.4 (integration benchmarking), §6.5 (analysis).
 | Brief question / metric (§6, §6.4) | How it is measured | Tool / file |
 |---|---|---|
 | Ingestion throughput (books/s) | `books.downloaded` messages enqueued per second during a `pipeline` run | `pipeline` → `summary.json: ingestion_throughput_books_s`, `broker.csv` |
-| Indexing throughput (books/s) and indexing latency (s/book) | `index-only`: client publishes `BookDownloaded` for books already in the datalake, waits for every `BookIndexed` | `index-only` → `throughput_books_s`, `time_per_book_s`, `latency_ms` |
+| Indexing throughput (books/s) and indexing latency (s/book) | `index-only`: client publishes `BookDownloaded` for books already in the datalake, waits for every `BookIndexed` | `index-only` → `throughput_books_s`, `time_per_book_ms`; per-book `latency_ms` from I4 (paced) |
 | End-to-end latency (request → searchable) | `pipeline`: client `POST /ingest/{id}` → client receives `BookIndexed` (same clock) | `pipeline` → `latency_ms`, `books.csv` |
 | Query response time (mean, p95) under concurrent load | closed-loop clients on `GET /search`, warm-up excluded | `search` → `latency_ms`, `throughput_qps`, `timeline.csv` |
 | Coordination cost | broker average time in queue per destination; e2e latency minus processing time (JMH: ~18 ms/book in batches, 05bcfec) | `broker.csv`, `summary.json: broker` |
@@ -62,10 +62,17 @@ Baseline (single instance): 1 replica per service, `consumer.threads` ingestion 
 | I1 | Indexing batch size | `consumer.batch-size` 1, 5, 20, 50 | `index-only`, 1000 books, empty datamart | books/s, s/book, latency p95 |
 | I2 | Indexing threads | `consumer.threads` 1, 2, 4 | as I1 | books/s (expected flat: single SQLite writer, JMH 05bcfec) |
 | I3 | Indexing replicas | indexing replicas 1, 2, 3 | as I1 | books/s, `SQLITE_BUSY` / rollbacks in logs, broker time in queue |
+| I4 | Per-book indexing latency below saturation | send rate 2, 5, 10 books/s (`--rate`), 200 books, batch 20 | `index-only` paced | latency mean/p95 per book (batch wait + write), not queue backlog |
 | P1 | Ingestion replicas | ingestion replicas 1, 2, 4 | `pipeline`, 1000 books from the local mirror, empty datalake + datamart | ingestion books/s, e2e latency, queue depth over time |
 | X1 | Search while indexing | none: S1 at the saturating concurrency **during** an `index-only` run | `search` + `index-only` in parallel | p95 idle vs under indexing (WAL readers vs single writer) |
 
-Order: S1 → S2 → I1 → I2 → I3 → P1 → X1. Final numbers only from the final code (report rule:
+Order: S1 → S2 → I1 → I2 → I3 → I4 → P1 → X1.
+
+Latency of unpaced runs (I1–I3, all 1000 messages sent at once) is mostly **time waiting in the
+queue** (backlog): it describes saturation, not the cost of one book. Per-book indexing latency is
+`time_per_book_ms` (inverse throughput) and the paced runs of I4. Search runs also record
+`empty_results` and `results_total`, because Search answers 200 with 0 results when the datamart is
+missing: a run where every query is empty is flagged. Final numbers only from the final code (report rule:
 only results of the delivered code), on a clean commit (`host.txt` flags uncommitted changes).
 X1 measures `X1_DURATION` s (default 30) so that the search window fits inside the re-index; the
 runner flags the run if the re-index ended earlier.
@@ -78,7 +85,7 @@ disk); CPU for Search replicas, which share the same cores as everything else.
 
 ```bash
 mvn verify                                                  # builds the jars, bench-client included
-bash scripts/bench-integration.sh                           # all experiments, 3 runs each (~2.5 h)
+bash scripts/bench-integration.sh                           # all experiments, 3 runs each (~2 h)
 bash scripts/bench-integration.sh S1 I1                     # a subset
 RUNS=1 DURATION=20 S1_LEVELS="1 8" bash scripts/bench-integration.sh S1 I1   # quick trial
 ```
