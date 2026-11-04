@@ -1,0 +1,64 @@
+{
+  "kind": "pipeline",
+  "label": "P1-i1",
+  "started_at": "2026-11-04T18:39:53Z",
+  "options": {
+    "broker": "tcp://127.0.0.1:61616",
+    "broker-http": "http://127.0.0.1:7000",
+    "count": "all",
+    "rate": "0.0",
+    "timeout": "1800",
+    "ingest-url": "http://127.0.0.1:7001",
+    "ids": "/home/andrea/stage_2/bench/ids-tier1000.txt",
+    "out": "results/integration/20261104-1701/P1/i1/run-2",
+    "label": "P1-i1"
+  },
+  "client_host": {
+    "cpus": 12,
+    "client_max_heap_mb": 2740,
+    "os": "Linux 6.6.87.2-microsoft-standard-WSL2",
+    "java": "21.0.12.1+1-1-26.04.4-Ubuntu"
+  },
+  "books": 1000,
+  "accepted": 1000,
+  "skipped_already_ingested": 0,
+  "errors": 0,
+  "indexed": 1000,
+  "missing": 0,
+  "submit_duration_s": 37.84,
+  "duration_s": 62.04,
+  "throughput_books_s": 16.12,
+  "time_per_book_ms": 62.04,
+  "latency_ms": {
+    "n": 1000,
+    "mean": 13034.43,
+    "sd": 7454.35,
+    "min": 961.0,
+    "p50": 13812.0,
+    "p90": 23647.0,
+    "p95": 24044.0,
+    "p99": 25310.0,
+    "max": 26715.0
+  },
+  "broker": {
+    "ingest.requests": {
+      "enqueued_during_run": 1000,
+      "dequeued_during_run": 1000,
+      "depth_at_end": 0,
+      "average_time_in_queue_ms": 2.489
+    },
+    "books.downloaded": {
+      "enqueued_during_run": 1000,
+      "dequeued_during_run": 1000,
+      "depth_at_end": 0,
+      "average_time_in_queue_ms": 10434.667
+    },
+    "ActiveMQ.DLQ": {
+      "enqueued_during_run": 0,
+      "dequeued_during_run": 0,
+      "depth_at_end": 0,
+      "average_time_in_queue_ms": 0.0
+    }
+  },
+  "ingestion_throughput_books_s": 26.15
+}

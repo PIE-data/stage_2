@@ -1,0 +1,50 @@
+{
+  "kind": "search",
+  "label": "X1-indexing-c16",
+  "started_at": "2026-11-04T18:53:07Z",
+  "options": {
+    "url": "http://127.0.0.1:7003",
+    "queries": "/home/andrea/stage_2/bench/queries-tier1000.txt",
+    "concurrency": "16",
+    "warmup": "5",
+    "duration": "30",
+    "limit": "10",
+    "out": "results/integration/20261104-1701/X1/indexing-c16/run-2",
+    "label": "X1-indexing-c16"
+  },
+  "client_host": {
+    "cpus": 12,
+    "client_max_heap_mb": 2740,
+    "os": "Linux 6.6.87.2-microsoft-standard-WSL2",
+    "java": "21.0.12.1+1-1-26.04.4-Ubuntu"
+  },
+  "queries": 300,
+  "concurrency": 16,
+  "measured_s": 30,
+  "requests": 138056,
+  "errors": 0,
+  "throughput_qps": 4601.87,
+  "latency_ms": {
+    "n": 138056,
+    "mean": 3.47,
+    "sd": 3.14,
+    "min": 0.62,
+    "p50": 2.59,
+    "p90": 6.25,
+    "p95": 8.58,
+    "p99": 16.34,
+    "max": 81.15
+  },
+  "empty_results": 31274,
+  "results_total": {
+    "n": 138056,
+    "mean": 26.61,
+    "sd": 76.77,
+    "min": 0.0,
+    "p50": 3.0,
+    "p90": 80.0,
+    "p95": 139.0,
+    "p99": 463.0,
+    "max": 701.0
+  }
+}

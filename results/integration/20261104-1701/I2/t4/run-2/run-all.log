@@ -1,0 +1,12 @@
+nginx: the configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.vFpx60 syntax is ok
+nginx: configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.vFpx60 test is successful
+Generated configuration: /home/andrea/bench/s2-integration/run/nginx/nginx.conf
+Search replicas: 1
+Gateway: 127.0.0.1:8080
+Ready: broker port=7000 pid=26458
+Ready: ingestion-1 port=7001 pid=26501
+Ready: indexing-1 port=7002 pid=26561
+Ready: search-1 port=7003 pid=26615
+Ready: feeder port=7004 pid=26658
+Running mode=full; data=/home/andrea/bench/s2-integration/data; gateway=http://127.0.0.1:8080; registry=/home/andrea/bench/s2-integration/run/processes.json
+Services started; no ingestion request submitted automatically. Validate feeder API separately.

@@ -51,6 +51,7 @@ CFG="$BENCH_WORK/run.env"
 BROKER_HTTP="http://127.0.0.1:7000"
 MONITOR_PID=""
 MIRROR_PID=""
+RUN_FOLDER=""                         # run folder of the deployment started last
 
 log() { printf '%s %s\n' "$(date +%H:%M:%S)" "$*"; }
 run() { if [ "$DRY_RUN" = 1 ]; then echo "  + $*"; else "$@"; fi; }
@@ -69,6 +70,7 @@ config() {
 }
 
 start() {   # $1 = full | search, $2 = run folder
+    RUN_FOLDER="$2"
     run bash scripts/run-all.sh --config "$CFG" --mode "$1" > "$2/run-all.log" 2>&1 \
         || { log "ERROR: start failed, see $2/run-all.log"; tail -5 "$2/run-all.log"; exit 1; }
 }
@@ -78,6 +80,12 @@ stop() {
     [ -f "$CFG" ] || return 0
     bash scripts/stop-all.sh --config "$CFG" > "$BENCH_WORK/stop-all.log" 2>&1 \
         || log "WARNING: stop failed, see $BENCH_WORK/stop-all.log"
+    # keep the service logs of this run (run-all writes them under RUN_DIR/logs/<start time>/)
+    if [ -n "$RUN_FOLDER" ]; then
+        local dirs=("$BENCH_WORK/run/logs"/*/)   # names are timestamps: the last one is the newest
+        [ -d "${dirs[-1]}" ] && cp -r "${dirs[-1]}" "$RUN_FOLDER/logs"
+        RUN_FOLDER=""
+    fi
 }
 
 monitor_start() {   # CPU/memory per process and host, once per second, until monitor_stop

@@ -115,6 +115,9 @@ What the runner does for each run:
 
 ## 5. Analysis (§6.5)
 
+Results of the 2026-11-04 session: **`docs/INTEGRATION_RESULTS.md`** (figures with
+`scripts/plot-integration.py`). Service logs are copied into each run folder (`logs/`).
+
 - `aggregate.csv`: one row per label and metric (mean, sd, min, max over the runs).
 - Plots: throughput vs concurrency (S1), p95 vs replicas (S2), books/s vs batch/threads/replicas
   (I1–I3), queue depth over time (P1, from `broker.csv`), latency distribution idle vs indexing (X1).
