@@ -21,3 +21,7 @@ Thumbs.db
 
 # Python bytecode cache
 __pycache__/
+
+# Integration benchmarks: raw per-request search samples (~2 MB each, 170+ MB per session);
+# summaries, timelines, CPU/memory and aggregate.csv are committed
+results/integration/**/requests.csv
