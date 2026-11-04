@@ -1,0 +1,14 @@
+date: 2026-11-04T17:01:42Z
+commit: 19e2b1b 
+experiments: S1 S2 I1 I2 I3 I4 P1 X1  runs: 3  warmup: 10s  duration: 60s
+bench data: /home/andrea/bench/s2-tier1000 (1000 receipts)
+Linux MSI 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 GNU/Linux
+CPU(s):                               12
+Model name:                           12th Gen Intel(R) Core(TM) i7-1255U
+Thread(s) per core:                   2
+Core(s) per socket:                   6
+               total        used        free      shared  buff/cache   available
+Mem:            10Gi       566Mi       7.8Gi       3.6Mi       2.5Gi        10Gi
+/dev/sdd       1007G   48G  909G   5% /
+openjdk version "21.0.12.1" 2026-08-18
+nginx version: nginx/1.28.3 (Ubuntu)

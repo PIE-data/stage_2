@@ -1,0 +1,12 @@
+nginx: the configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.iwpfN8 syntax is ok
+nginx: configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.iwpfN8 test is successful
+Generated configuration: /home/andrea/bench/s2-integration/run/nginx/nginx.conf
+Search replicas: 1
+Gateway: 127.0.0.1:8080
+Ready: broker port=7000 pid=22023
+Ready: ingestion-1 port=7001 pid=22064
+Ready: indexing-1 port=7002 pid=22125
+Ready: search-1 port=7003 pid=22175
+Ready: feeder port=7004 pid=22218
+Running mode=full; data=/home/andrea/bench/s2-integration/data; gateway=http://127.0.0.1:8080; registry=/home/andrea/bench/s2-integration/run/processes.json
+Services started; no ingestion request submitted automatically. Validate feeder API separately.

@@ -1,0 +1,15 @@
+nginx: the configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.W4yKrz syntax is ok
+nginx: configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.W4yKrz test is successful
+Generated configuration: /home/andrea/bench/s2-integration/run/nginx/nginx.conf
+Search replicas: 1
+Gateway: 127.0.0.1:8080
+Ready: broker port=7000 pid=47371
+Ready: ingestion-1 port=7001 pid=47413
+Ready: ingestion-2 port=7011 pid=47475
+Ready: ingestion-3 port=7021 pid=47529
+Ready: ingestion-4 port=7031 pid=47582
+Ready: indexing-1 port=7002 pid=47634
+Ready: search-1 port=7003 pid=47686
+Ready: feeder port=7004 pid=47729
+Running mode=full; data=/home/andrea/bench/s2-integration/pipeline-data; gateway=http://127.0.0.1:8080; registry=/home/andrea/bench/s2-integration/run/processes.json
+Services started; no ingestion request submitted automatically. Validate feeder API separately.

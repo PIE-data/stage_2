@@ -1,0 +1,7 @@
+nginx: the configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.eSt1J6 syntax is ok
+nginx: configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.eSt1J6 test is successful
+Generated configuration: /home/andrea/bench/s2-integration/run/nginx/nginx.conf
+Search replicas: 1
+Gateway: 127.0.0.1:8080
+Ready: search-1 port=7003 pid=12898
+Running mode=search; data=/home/andrea/bench/s2-integration/data; gateway=http://127.0.0.1:8080; registry=/home/andrea/bench/s2-integration/run/processes.json

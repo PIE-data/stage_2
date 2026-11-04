@@ -1,0 +1,50 @@
+{
+  "kind": "search",
+  "label": "S2-r2-c32",
+  "started_at": "2026-11-04T17:34:32Z",
+  "options": {
+    "url": "http://127.0.0.1:8080",
+    "queries": "/home/andrea/stage_2/bench/queries-tier1000.txt",
+    "concurrency": "32",
+    "warmup": "10",
+    "duration": "60",
+    "limit": "10",
+    "out": "results/integration/20261104-1701/S2/r2-c32/run-1",
+    "label": "S2-r2-c32"
+  },
+  "client_host": {
+    "cpus": 12,
+    "client_max_heap_mb": 2740,
+    "os": "Linux 6.6.87.2-microsoft-standard-WSL2",
+    "java": "21.0.12.1+1-1-26.04.4-Ubuntu"
+  },
+  "queries": 300,
+  "concurrency": 32,
+  "measured_s": 60,
+  "requests": 252756,
+  "errors": 0,
+  "throughput_qps": 4212.6,
+  "latency_ms": {
+    "n": 252756,
+    "mean": 7.59,
+    "sd": 4.07,
+    "min": 1.31,
+    "p50": 6.78,
+    "p90": 11.57,
+    "p95": 14.0,
+    "p99": 22.17,
+    "max": 105.99
+  },
+  "empty_results": 57264,
+  "results_total": {
+    "n": 252756,
+    "mean": 26.48,
+    "sd": 76.41,
+    "min": 0.0,
+    "p50": 3.0,
+    "p90": 79.0,
+    "p95": 127.0,
+    "p99": 354.0,
+    "max": 701.0
+  }
+}

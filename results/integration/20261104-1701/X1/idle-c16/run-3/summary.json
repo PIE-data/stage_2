@@ -1,0 +1,50 @@
+{
+  "kind": "search",
+  "label": "X1-idle-c16",
+  "started_at": "2026-11-04T18:55:04Z",
+  "options": {
+    "url": "http://127.0.0.1:7003",
+    "queries": "/home/andrea/stage_2/bench/queries-tier1000.txt",
+    "concurrency": "16",
+    "warmup": "5",
+    "duration": "30",
+    "limit": "10",
+    "out": "results/integration/20261104-1701/X1/idle-c16/run-3",
+    "label": "X1-idle-c16"
+  },
+  "client_host": {
+    "cpus": 12,
+    "client_max_heap_mb": 2740,
+    "os": "Linux 6.6.87.2-microsoft-standard-WSL2",
+    "java": "21.0.12.1+1-1-26.04.4-Ubuntu"
+  },
+  "queries": 300,
+  "concurrency": 16,
+  "measured_s": 30,
+  "requests": 210317,
+  "errors": 0,
+  "throughput_qps": 7010.57,
+  "latency_ms": {
+    "n": 210317,
+    "mean": 2.28,
+    "sd": 1.27,
+    "min": 0.53,
+    "p50": 1.95,
+    "p90": 3.79,
+    "p95": 4.59,
+    "p99": 6.7,
+    "max": 22.19
+  },
+  "empty_results": 47660,
+  "results_total": {
+    "n": 210317,
+    "mean": 26.57,
+    "sd": 76.69,
+    "min": 0.0,
+    "p50": 3.0,
+    "p90": 79.0,
+    "p95": 127.0,
+    "p99": 354.0,
+    "max": 701.0
+  }
+}

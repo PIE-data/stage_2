@@ -1,0 +1,13 @@
+nginx: the configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.OaNs8B syntax is ok
+nginx: configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.OaNs8B test is successful
+Generated configuration: /home/andrea/bench/s2-integration/run/nginx/nginx.conf
+Search replicas: 1
+Gateway: 127.0.0.1:8080
+Ready: broker port=7000 pid=41059
+Ready: ingestion-1 port=7001 pid=41101
+Ready: ingestion-2 port=7011 pid=41163
+Ready: indexing-1 port=7002 pid=41218
+Ready: search-1 port=7003 pid=41269
+Ready: feeder port=7004 pid=41312
+Running mode=full; data=/home/andrea/bench/s2-integration/pipeline-data; gateway=http://127.0.0.1:8080; registry=/home/andrea/bench/s2-integration/run/processes.json
+Services started; no ingestion request submitted automatically. Validate feeder API separately.
