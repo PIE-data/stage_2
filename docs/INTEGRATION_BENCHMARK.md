@@ -1,7 +1,7 @@
 # Integration benchmarks — plan and tools (#8)
 
-Status: **plan + measurement client ready**; the runs need the deployment scripts of #7 to start
-and stop the services and to sample CPU/memory. Brief references: §6.1 (scope), §6.2 (replication
+Status: **plan, measurement client and runner ready**; `scripts/bench-integration.sh` runs the
+experiments with the deployment scripts of #7 (start/stop, CPU/memory sampling). Brief references: §6.1 (scope), §6.2 (replication
 and threading), §6.4 (integration benchmarking), §6.5 (analysis).
 
 ## 1. Questions and metrics
@@ -65,25 +65,45 @@ Baseline (single instance): 1 replica per service, `consumer.threads` ingestion 
 | P1 | Ingestion replicas | ingestion replicas 1, 2, 4 | `pipeline`, 1000 books from the local mirror, empty datalake + datamart | ingestion books/s, e2e latency, queue depth over time |
 | X1 | Search while indexing | none: S1 at the saturating concurrency **during** an `index-only` run | `search` + `index-only` in parallel | p95 idle vs under indexing (WAL readers vs single writer) |
 
-Order: S1 → S2 → I1 → I2 → I3 → P1 → X1. I1/I2 and S1 can be run before #7 is merged by starting
-the jars by hand; the final numbers are taken with the #7 scripts on the final code (report rule:
-only results of the delivered code).
+Order: S1 → S2 → I1 → I2 → I3 → P1 → X1. Final numbers only from the final code (report rule:
+only results of the delivered code), on a clean commit (`host.txt` flags uncommitted changes).
+X1 measures `X1_DURATION` s (default 30) so that the search window fits inside the re-index; the
+runner flags the run if the re-index ended earlier.
 
 Expected bottlenecks to confirm or reject (ARCHITECTURE.md §6): the single SQLite writer for
 indexing; network/disk for ingestion (removed by the local mirror, so ingestion measures CPU +
 disk); CPU for Search replicas, which share the same cores as everything else.
 
-## 4. Procedure for one run
+## 4. Running: `scripts/bench-integration.sh`
 
-1. Idle host, nothing else running; note the host (CPU, cores, RAM, disk, OS/WSL, Java) once per
-   session in `results/integration/<date>/host.txt` (same commands as `scripts/bench-indexing.sh`).
+```bash
+mvn verify                                                  # builds the jars, bench-client included
+bash scripts/bench-integration.sh                           # all experiments, 3 runs each (~2.5 h)
+bash scripts/bench-integration.sh S1 I1                     # a subset
+RUNS=1 DURATION=20 S1_LEVELS="1 8" bash scripts/bench-integration.sh S1 I1   # quick trial
+```
+
+Settings are environment variables listed at the top of the script (data folders, runs, warm-up,
+duration, concurrency levels, timeout, `DRY_RUN=1`). Data: `BENCH_DATA` (default
+`~/bench/s2-tier1000`) is only read; everything that changes lives in `BENCH_WORK` (default
+`~/bench/s2-integration`): links to the datalake, the datamart and broker store of each run, a
+copy of the full datamart (built once with `POST /index/rebuild`) restored before every search
+run, the empty datalake of P1. P1 starts the Stage 1 mirror server (`STAGE1`, default
+`~/bench/stage_1`) and points `SOURCE_BASE_URL` at it, so ingestion does not depend on the network.
+Every run keeps its `deployment.env`, `run-all.log`, `metrics/` (CPU/memory CSV) and the client
+output; a line `CHECK FAILED` in the console means the run must not be used (step 6 below).
+
+What the runner does for each run:
+
+1. Once per session: host description (CPU, cores, RAM, disk, OS/WSL, Java, commit) in
+   `results/integration/<date>/host.txt`. Keep the host idle while it runs.
 2. Reset state: stop all services; for `index-only` delete `<data.dir>/datamarts/`; for `pipeline`
    delete the datalake and control folders too; the broker store is deleted so queues start empty.
 3. Start the configuration with the #7 scripts, wait until every `/status` answers.
 4. Start the #7 monitor (CPU/memory CSV) into the run folder.
 5. Run the client command with `--out results/integration/<date>/<experiment>/<config>/run-<k>`.
-6. Check before keeping the run: `missing = 0`, `errors = 0` (or explained), `ActiveMQ.DLQ` empty,
-   `/index/status` book count = books sent.
+6. Check before keeping the run: `missing = 0`, `errors = 0`, nothing enqueued on `ActiveMQ.DLQ`,
+   no book skipped as already ingested (P1).
 7. Stop everything; repeat from 2 for the next run.
 
 ## 5. Analysis (§6.5)
