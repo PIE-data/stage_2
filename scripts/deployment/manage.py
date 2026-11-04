@@ -48,6 +48,14 @@ def integer(c, key, low=1, high=65535):
         raise ValueError(f'{key}: expected integer {low}..{high}')
     return int(value)
 
+def ensure_free(port):
+    """Fails if something listens on port. SO_REUSEADDR (as Jetty and nginx use) ignores the
+    TIME_WAIT connections left for ~60 s by a service that just stopped: without it a restart
+    right after a stop was refused with 'Address already in use'."""
+    with socket.socket() as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(('0.0.0.0', port))
+
 def stop(rows, timeout):
     for row in reversed(rows):
         if alive(row):
@@ -123,8 +131,7 @@ def start(c, args, registry, rows):
     if len(set(ports)) != len(ports) or any(p > 65535 for p in ports):
         raise ValueError('Port collision or port outside 1..65535')
     for port in ports:
-        with socket.socket() as sock:
-            sock.bind(('0.0.0.0', port))
+        ensure_free(port)
     for _, module, _, _ in plan:
         if not (ROOT/module/'target'/f'{module}.jar').is_file():
             raise ValueError(f'Missing {module} JAR: run mvn verify')
