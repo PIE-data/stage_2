@@ -116,33 +116,48 @@ COMMIT;
 
 ## 4. Reading (Search)
 
-Each HTTP request uses **one read transaction**, so `total` and the returned page come from the
-same snapshot. Query terms are normalized with the Stage 1 tokenizer (SPEC §1.1); `q` with several
-terms means AND.
+Each HTTP request opens one **read-only** connection (`mode=ro`, `PRAGMA query_only = ON`,
+`busy_timeout` 30000) and uses **one read transaction**, so `total` and the returned page come from
+the same snapshot. Query terms are normalized with the Stage 1 tokenizer (SPEC §1.1) and
+de-duplicated; `q` with several terms means AND. No terms after normalization, a missing datamart
+file or an empty datamart give `total` 0 (HTTP 200).
 
-Matching books with filters (k = number of distinct query terms):
+1. `N = SELECT COUNT(*) FROM books` (0 → no results).
+2. One query reads the postings of the query terms, with the filters that are plain equalities:
 
 ```sql
-SELECT p.book_id
-FROM postings p JOIN books b ON b.book_id = p.book_id
+SELECT b.book_id, b.title, b.author, b.language, b.release_year,
+       p.term, p.tf, t.df
+FROM postings p
+JOIN books b ON b.book_id = p.book_id
+JOIN terms t ON t.term = p.term
 WHERE p.term IN (:t1, :t2, ...)
-  AND (:author   IS NULL OR b.author   LIKE '%' || :author || '%')   -- case-insensitive for ASCII
-  AND (:language IS NULL OR b.language = :language)
-  AND (:year     IS NULL OR b.release_year = :year)
-GROUP BY p.book_id
-HAVING COUNT(*) = :k;
+  AND b.language = :language        -- only if the filter is given
+  AND b.release_year = :year        -- only if the filter is given
+ORDER BY b.book_id, p.term;
 ```
 
-Ranking (computed in Java over the matching books, or in SQL with the same formula):
+3. In Java, over those rows:
+   - **author filter:** the book's author contains the filter as a literal substring, ignoring
+     case (`toLowerCase(Locale.ROOT)`, so accented letters too). It is not done with SQL `LIKE`,
+     which ignores case only for ASCII letters and treats `%` and `_` typed by the user as
+     wildcards;
+   - **AND:** a book matches only if it has a row for every query term (k = number of distinct
+     terms);
+   - **score**, summed in the fixed row order above so that it is reproducible:
 
 ```
 score(book) = Σ over query terms t of  tf(t, book) · ln(N / df(t))
-N = SELECT COUNT(*) FROM books
 order: score DESC, book_id ASC
 ```
 
-`total` = number of matching books; the page is `ORDER BY score DESC, book_id ASC
-LIMIT :limit OFFSET :offset`.
+`total` = number of matching books; the page is the slice `[offset, offset + limit)` of that order.
+
+Costs to keep in mind (measured in `docs/INTEGRATION_RESULTS.md`): every request opens a new
+connection, so it starts with an empty SQLite page cache and relies on the operating system's file
+cache; with an author filter the postings of books by other authors are read and then discarded.
+A connection pool and pushing the author filter into SQL are possible improvements; they were not
+needed at the measured load (about 1 ms mean latency with one client, CPU-bound at higher load).
 
 ## 5. Concurrency summary
 
