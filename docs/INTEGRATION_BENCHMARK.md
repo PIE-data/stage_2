@@ -65,8 +65,9 @@ Baseline (single instance): 1 replica per service, `consumer.threads` ingestion 
 | I4 | Per-book indexing latency below saturation | send rate 2, 5, 10 books/s (`--rate`), 200 books, batch 20 | `index-only` paced | latency mean/p95 per book (batch wait + write), not queue backlog |
 | P1 | Ingestion replicas | ingestion replicas 1, 2, 4 | `pipeline`, 1000 books from the local mirror, empty datalake + datamart | ingestion books/s, e2e latency, queue depth over time |
 | X1 | Search while indexing | none: S1 at the saturating concurrency **during** an `index-only` run | `search` + `index-only` in parallel | p95 idle vs under indexing (WAL readers vs single writer) |
+| X0 | Control for X1 | none: the same `index-only` re-index into the full datamart, **no** search load | `index-only`, 1000 books, restored datamart | books/s of a re-index alone; X1 indexing rate is compared with this, not with I1 (I1 inserts new books into an empty datamart, a re-index replaces existing rows and is slower) |
 
-Order: S1 → S2 → I1 → I2 → I3 → I4 → P1 → X1.
+Order: S1 → S2 → I1 → I2 → I3 → I4 → P1 → X1 → X0.
 
 Latency of unpaced runs (I1–I3, all 1000 messages sent at once) is mostly **time waiting in the
 queue** (backlog): it describes saturation, not the cost of one book. Per-book indexing latency is
