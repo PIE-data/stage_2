@@ -834,7 +834,7 @@ slightly as more Ingestion replicas are added.
 
 \begin{table}[H]
     \centering
-    \caption{X1: Search under load while one Indexing replica rebuilds the datamart.}
+    \caption{X1: Search under load while one Indexing replica re-indexes the 1,000 books of the full datamart (\texttt{BookDownloaded} events); X0: the same re-index without Search load.}
     \label{tab:x1}
     \small
     \begin{tabular}{lrrrr}
@@ -842,6 +842,7 @@ slightly as more Ingestion replicas are added.
         & \textbf{Search q/s} & \textbf{Search p95 ms} & \textbf{Search p99 ms} & \textbf{Indexing b/s} \\
         \midrule
         Search idle & $6555 \pm 417$ & $4.96 \pm 0.35$ & $7.38 \pm 0.65$ & -- \\
+        Re-index only (X0) & -- & -- & -- & $10.01 \pm 1.20$ \\
         During re-index & $4696 \pm 247$ & $8.23 \pm 0.47$ & $15.16 \pm 1.09$ & $9.08 \pm 0.17$ \\
         \bottomrule
     \end{tabular}
@@ -861,10 +862,16 @@ slightly as more Ingestion replicas are added.
     \label{fig:x1-p95}
 \end{figure}
 
-Concurrent Indexing lowers Search throughput by 28\% and increases p95 by 66\%. At the same time,
-Search load reduces Indexing from about 18.4 books/s in the baseline to 9.1 books/s. WAL mode lets
-readers and the writer operate concurrently, while the CPU measurements show strong competition
-for the same host resources: Search uses about 5.5 logical CPUs at p90 and Indexing about 3.3.
+Concurrent Indexing lowers Search throughput by 28\% and increases p95 by 66\%. The effect in the
+other direction is small. The same re-index without Search load (X0) runs at $10.0 \pm 1.2$
+books/s, against $9.1 \pm 0.2$ books/s under Search load: about 9\% lower, which is within the
+run-to-run variation of X0. The I1 throughput (18.4 books/s) is not a valid baseline here: I1
+inserts new books into an empty datamart, while a re-index first removes the existing rows of every
+book and is therefore slower. X0 was measured on 8 November 2026 on the same host and with the same
+service code; only the benchmark script changed. WAL mode lets readers and the writer operate
+concurrently, while the CPU measurements show strong competition for the same host resources:
+Search uses about 5.5 logical CPUs at p90 and Indexing about 3.3. Search is therefore the side
+that pays most of the cost of sharing the machine.
 
 \subsection{Coordination Cost and Resource Use}
 
