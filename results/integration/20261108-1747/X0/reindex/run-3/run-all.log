@@ -1,0 +1,12 @@
+nginx: the configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.WS6bKd syntax is ok
+nginx: configuration file /home/andrea/bench/s2-integration/run/nginx/nginx.conf.WS6bKd test is successful
+Generated configuration: /home/andrea/bench/s2-integration/run/nginx/nginx.conf
+Search replicas: 1
+Gateway: 127.0.0.1:8080
+Ready: broker port=7000 pid=2784
+Ready: ingestion-1 port=7001 pid=2825
+Ready: indexing-1 port=7002 pid=2885
+Ready: search-1 port=7003 pid=2936
+Ready: feeder port=7004 pid=2979
+Running mode=full; data=/home/andrea/bench/s2-integration/data; gateway=http://127.0.0.1:8080; registry=/home/andrea/bench/s2-integration/run/processes.json
+Services started; no ingestion request submitted automatically. Validate feeder API separately.
