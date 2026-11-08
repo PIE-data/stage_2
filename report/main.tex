@@ -137,114 +137,85 @@ path.
 \begin{figure}[H]
 	\centering
 	\begin{tikzpicture}[
-		node distance=1.3cm and 1.7cm,
 		every node/.style={font=\small},
-		service/.style={
-			draw,
-			rounded corners,
-			minimum width=2.6cm,
-			minimum height=0.9cm,
-			align=center
-		},
-		storage/.style={
-			draw,
-			cylinder,
-			shape border rotate=90,
-			aspect=0.28,
-			minimum width=2.4cm,
-			minimum height=1.2cm,
-			align=center
-		},
-		broker/.style={
-			draw,
-			rectangle,
-			minimum width=2.6cm,
-			minimum height=0.8cm,
-			align=center,
-			fill=gray!10
-		},
-		arrow/.style={
-			-{Latex[length=2mm]},
-			thick
-		},
-		http/.style={
-			-{Latex[length=2mm]},
-			thick,
-			dashed
-		}
+		rep/.style={draw, rounded corners, minimum width=2.3cm, minimum height=0.7cm, align=center, fill=white},
+		service/.style={draw, rounded corners, minimum width=2.3cm, minimum height=0.9cm, align=center, fill=white},
+		group/.style={draw, rounded corners, inner sep=0.15cm},
+		title/.style={font=\footnotesize, align=center, inner sep=1pt},
+		storage/.style={draw, cylinder, shape border rotate=90, aspect=0.25, minimum width=2.2cm, minimum height=1.25cm, align=center, fill=white},
+		queue/.style={draw, rectangle, minimum width=2.6cm, minimum height=0.75cm, align=center, fill=white},
+		lbl/.style={font=\footnotesize, align=center, inner sep=2pt},
+		arrow/.style={-{Latex[length=2mm]}, thick},
+		http/.style={-{Latex[length=2mm]}, thick, dashed}
 		]
-		
-		% Top row: public search path
-		\node[service] (client) {Front-end /\\HTTP client};
-		
-		\node[service, right=of client] (nginx) {nginx gateway\\:8080};
-		
-		\node[service, right=1.8cm of nginx, yshift=0.6cm] (search1) {Search\\replica 1};
-		
-		\node[service, right=1.8cm of nginx, yshift=-0.6cm] (search2) {Search\\replica 2};
-		
-		\node[storage, right=1.8cm of search1, yshift=-0.6cm] (datamart) {SQLite\\datamart};
-		
-		\draw[arrow] (client) -- node[above]{public HTTP} (nginx);
-		\draw[arrow] (nginx) -- (search1);
-		\draw[arrow] (nginx) -- (search2);
-		\draw[arrow] (search1) -- (datamart);
-		\draw[arrow] (search2) -- (datamart);
-		
-		% Middle row: feeder and ingestion
-		\node[service, below=2.5cm of client] (feeder) {Feeder};
-		
-		\node[broker, right=2.0cm of feeder] (ingestq) {ingest.requests\\queue};
-		
-		\node[service, right=2.2cm of ingestq, yshift=0.6cm] (ing1) {Ingestion\\replica 1};
-		
-		\node[service, right=2.2cm of ingestq, yshift=-0.6cm] (ing2) {Ingestion\\replica 2};
-		
-		\node[storage, right=1.9cm of ing1, yshift=-0.6cm] (datalake) {Datalake +\\control};
-		
-		\draw[arrow] (feeder) -- node[above]{publish} (ingestq);
-		\draw[arrow] (ingestq) -- (ing1);
-		\draw[arrow] (ingestq) -- (ing2);
-		
-		\draw[arrow] (ing1) -- (datalake);
-		\draw[arrow] (ing2) -- (datalake);
-		
-		% Internal HTTP status/list path
-		\draw[http]
-		(feeder.north east)
-		to[bend left=20]
-		node[above, sloped]{GET /ingest/list}
-		(ing1.north west);
-		
-		% Bottom row: indexing
-		\node[broker, below=2.2cm of ingestq] (downloaded) {books.downloaded\\queue};
-		
-		\node[service, right=2.2cm of downloaded, yshift=0.6cm] (idx1) {Indexing\\replica 1};
-		
-		\node[service, right=2.2cm of downloaded, yshift=-0.6cm] (idx2) {Indexing\\replica 2};
-		
-		\node[broker, left=2.0cm of downloaded] (indexed) {books.indexed\\topic};
-		
-		\draw[arrow] (datalake.south west) |- (downloaded.east);
-		
-		\draw[arrow] (downloaded) -- (idx1);
-		\draw[arrow] (downloaded) -- (idx2);
-		
-		\draw[arrow] (idx1.east) -| (datamart.south);
-		\draw[arrow] (idx2.east) -| (datamart.south);
-		
-		\draw[arrow] (idx1.west) -- (indexed.east);
-		\draw[arrow] (idx2.west) -- (indexed.east);
-		
-		\draw[arrow]
-		(indexed.west)
-		-| node[pos=0.75,left]{progress}
-		(feeder.south);
-		
+		% columns: A = 0, B = 3.5, C = 7.1, D = 10.6
+		% --- Search
+		\node[title] (st) at (7.7,0.95) {\textbf{Search}\\Jetty request threads};
+		\node[rep, below=0.08cm of st] (s1) {replica 1 :7003};
+		\node[rep, below=0.12cm of s1] (s2) {replica 2 :7013};
+		\node[group, fill=blue!5, fit=(st)(s1)(s2)] (sg) {};
+		\node[title] at (st) {\textbf{Search}\\Jetty request threads};
+		\node[rep] at (s1) {replica 1 :7003};
+		\node[rep] at (s2) {replica 2 :7013};
+		\node[service] (nginx) at (3.3,0) {nginx gateway\\:8080};
+		\node[storage] (datamart) at (11.4,0) {SQLite\\datamart};
+		% --- Ingestion
+		\node[title] (it) at (7.7,-2.6) {\textbf{Ingestion}\\JMS consumer sessions};
+		\node[rep, below=0.08cm of it] (i1) {replica 1 :7001};
+		\node[rep, below=0.12cm of i1] (i2) {replica 2 :7011};
+		\node[group, fill=blue!5, fit=(it)(i1)(i2)] (ig) {};
+		\node[title] at (it) {\textbf{Ingestion}\\JMS consumer sessions};
+		\node[rep] at (i1) {replica 1 :7001};
+		\node[rep] at (i2) {replica 2 :7011};
+		\node[storage] (datalake) at (11.4,-4.9) {Datalake +\\control};
+		% --- Indexing
+		\node[title] (xt) at (7.7,-6.4) {\textbf{Indexing}\\JMS sessions, batches};
+		\node[rep, below=0.08cm of xt] (x1) {replica 1 :7002};
+		\node[rep, below=0.12cm of x1] (x2) {replica 2 :7012};
+		\node[group, fill=blue!5, fit=(xt)(x1)(x2)] (xg) {};
+		\node[title] at (xt) {\textbf{Indexing}\\JMS sessions, batches};
+		\node[rep] at (x1) {replica 1 :7002};
+		\node[rep] at (x2) {replica 2 :7012};
+		% --- Broker and feeder
+		\node[title] (bt) at (3.3,-2.75) {\textbf{ActiveMQ broker}\\:61616, HTTP :7000};
+		\node[queue, below=0.12cm of bt] (q1) {ingest.requests\\queue};
+		\node[queue] (q2) at (3.3,-7.15) {books.downloaded\\queue};
+		\node[queue] (t1) at (3.3,-9.1) {books.indexed\\topic};
+		\node[group, fill=gray!8, fit=(bt)(q1)(q2)(t1)] (broker) {};
+		\node[title] at (bt) {\textbf{ActiveMQ broker}\\:61616, HTTP :7000};
+		\node[queue] at (q1) {ingest.requests\\queue};
+		\node[queue] at (q2) {books.downloaded\\queue};
+		\node[queue] at (t1) {books.indexed\\topic};
+		\node[service] (feeder) at (0,-3.6) {Feeder\\:7004};
+		% --- host boundary and front-end
+		\coordinate (r) at (12.6,-9.5);
+		\node[draw, dashed, rounded corners, inner sep=0.3cm, fit=(feeder)(nginx)(sg)(datamart)(datalake)(broker)(xg)(r)] (host) {};
+		\node[lbl, anchor=north west] at ($(host.south west)+(0.1,0)$) {Single Stage~2 host: every process, queue and store runs on one machine.};
+		\node[service] (client) at (-0.3,2.0) {Front-end /\\HTTP client};
+		% --- public search path
+		\draw[arrow] (client.east) -| node[lbl, pos=0.25, above]{public HTTP} (nginx.north);
+		\draw[arrow] (nginx.east) -- (s1.west);
+		\draw[arrow] (nginx.east) -- (s2.west);
+		\draw[arrow] (sg.east |- datamart.west) -- node[lbl, above]{read} (datamart.west);
+		% --- ingestion
+		\draw[arrow] (feeder.east |- q1) -- (q1.west);
+		\draw[http] (feeder.north) |- node[lbl, pos=0.75, above]{GET /ingest/list (internal HTTP)} ($(ig.north)+(0,0.5)$) -- (ig.north);
+		\draw[arrow] (q1.east) -- (q1.east -| ig.west);
+		\draw[arrow] (ig.east |- i1) -| node[lbl, pos=0.25, above]{write files} (datalake.north);
+		\draw[arrow] (ig.south) -- (ig.south |- 0,-5.35) -- node[lbl, above]{publish BookDownloaded} (q2.north |- 0,-5.35) -- (q2.north);
+		% --- indexing
+		\draw[arrow] (q2.east) -- (q2.east -| xg.west);
+		\draw[arrow] (datalake.south) |- node[lbl, pos=0.75, above]{read} (xg.east |- x1);
+		\draw[arrow] (xg.east |- x2) -- node[lbl, pos=0.45, below]{write (single writer)} (12.75, 0 |- x2) -- (12.75,0) -- (datamart.east);
+		\draw[arrow] (xg.south) |- node[lbl, pos=0.7, below]{publish BookIndexed} (t1.east);
+		\draw[arrow] (t1.west) -| node[lbl, pos=0.75, left]{progress} (feeder.south);
 	\end{tikzpicture}
 	
-	\caption{Stage 2 architecture: public Search traffic, broker-driven pipeline,
-		replicas, and shared storage.}
+	\caption{Stage~2 architecture on one host. The front-end reaches only the nginx gateway (public
+		HTTP); Ingestion and Indexing are coordinated by broker queues and a topic; the dashed arrow is
+		the only internal HTTP call of the pipeline. Each service runs as N replicas (two in the default
+		configuration, ports separated by 10), and each process uses Jetty request threads or JMS
+		consumer sessions internally (Table~\ref{tab:replicas-threads}).}
 	\label{fig:stage2-architecture}
 \end{figure}
 
@@ -255,11 +226,11 @@ path.
     \caption{Processes in the Stage~2 deployment.}
     \label{tab:components}
     \small
-    \begin{tabularx}{\textwidth}{p{0.18\textwidth} p{0.12\textwidth} p{0.14\textwidth} X}
+    \begin{tabularx}{\textwidth}{p{0.13\textwidth} p{0.2\textwidth} p{0.09\textwidth} X}
         \toprule
         \textbf{Process} & \textbf{Port} & \textbf{Replicas} & \textbf{Responsibility} \\
         \midrule
-        Broker & 61616 / 7000 & 1 & Embedded ActiveMQ broker; persistent messages, queues, topic, and monitoring. \\
+        Broker & 61616, 7000 (HTTP) & 1 & Embedded ActiveMQ broker; persistent messages, queues, topic, and monitoring. \\
         Feeder & 7004 & 1 & Chooses books from Stage~1 manifests, skips completed work, publishes ingestion requests, and reports progress. \\
         Ingestion & 7001, 7011, \ldots & 1..N & Downloads and splits books, writes datalake files and receipts, publishes \texttt{books.downloaded}. \\
         Indexing & 7002, 7012, \ldots & 1..N & Parses metadata, builds the positional index, writes the SQLite datamart, publishes \texttt{books.indexed}. \\
@@ -610,7 +581,100 @@ lost.
 \section{Benchmarks and Results}
 \label{sec:benchmarks}
 % ---------------------------------------------------------------------------
-\subsection{Dataset, Method, and Measures}
+Benchmarks are run at two levels. JMH microbenchmarks measure single components in one JVM
+(Section~\ref{sec:jmh}); integration benchmarks measure the deployed services and the broker
+together (Sections~\ref{sec:integration-method}--\ref{sec:interference}). Both run on the same
+host.
+
+\subsection{Microbenchmarks (JMH)}
+\label{sec:jmh}
+
+The component level is measured with JMH~1.37 before the integration experiments. Benchmark
+classes live under \texttt{src/test/java/.../benchmark} of each module, so they are not part of
+the deployed jars. Every benchmark uses 5 warm-up and 10 measurement iterations, one fork and a
+fixed heap (\texttt{-Xms4G -Xmx4G}); results are exported as CSV to \texttt{results/jmh/}. The
+host is the same laptop described in Table~\ref{tab:benchmark-setup}. Indexing benchmarks were run on
+28 October 2026 (commit \texttt{05bcfec}, \texttt{results/jmh/20261028-1138}) and the Search
+benchmark on 29 October 2026; the measured code (tokenizer, header parser, datamart writer,
+Indexing service and Search queries) has not changed since. Values are means with the JMH 99.9\%
+error margin. Two golden books show the effect of size: book 8708 (about 2.7~k tokens) and book
+36020 (about 129~k tokens, the largest golden book).
+
+\begin{table}[H]
+    \centering
+    \caption{JMH: cost of one book in the Indexing path (ms per book, single thread).}
+    \label{tab:jmh-indexing}
+    \small
+    \begin{tabularx}{\textwidth}{X r r}
+        \toprule
+        \textbf{Operation} & \textbf{Book 8708} & \textbf{Book 36020} \\
+        \midrule
+        Parse header, tokenize, group positions, hash (no disk) & $0.44 \pm 0.01$ & $23.7 \pm 0.2$ \\
+        SQLite write of a new book, 1,000-book datamart & $7.38 \pm 0.20$ & $85.6 \pm 2.5$ \\
+        SQLite re-index (delete + write), 1,000-book datamart & $13.3 \pm 1.0$ & $153.7 \pm 39.9$ \\
+        SQLite re-index, 20-book datamart & $5.05 \pm 0.27$ & $57.6 \pm 0.6$ \\
+        SQLite re-index, 1,000-book datamart, 2~MiB page cache & $16.4 \pm 0.4$ & $160.5 \pm 2.3$ \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{JMH: transaction batching and threads in one Indexing process.}
+    \label{tab:jmh-throughput}
+    \small
+    \begin{tabularx}{\textwidth}{X r r r r}
+        \toprule
+        \textbf{Benchmark} & \textbf{1 thread} & \textbf{2 threads} & \textbf{4 threads} & \textbf{8 threads} \\
+        \midrule
+        Re-index, one transaction per book (books/s) & $4.67 \pm 0.66$ & $4.89 \pm 0.83$ & $4.65 \pm 0.89$ & $4.77 \pm 1.19$ \\
+        Re-index, batches of 20 books (books/s) & $11.02 \pm 1.18$ & $11.22 \pm 1.37$ & $11.42 \pm 0.94$ & $10.92 \pm 2.43$ \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{JMH: Search query cost on the 1,000-book datamart (one thread, offset 0, limit 20).}
+    \label{tab:jmh-search}
+    \small
+    \begin{tabular}{l l r}
+        \toprule
+        \textbf{Workload} & \textbf{Query} & \textbf{ms/query} \\
+        \midrule
+        single & \texttt{sea} & $4.43 \pm 0.72$ \\
+        multi & \texttt{sea ship} & $5.26 \pm 0.63$ \\
+        filtered & \texttt{sea ship}, author Stacpoole, language \texttt{en}, year 2017 & $3.40 \pm 0.28$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The microbenchmarks locate the cost of Indexing before any service runs. Writing to SQLite, not
+text processing, dominates: for the large book the write of a new book takes 85.6~ms against
+23.7~ms of parsing and tokenization (about 78\% of the work), and for the small book more than
+90\%. A re-index costs about 1.8 times a first insertion, because the previous rows of the book
+must be removed and the document frequencies corrected, and the write cost grows with the size of
+the index (57.6~ms with 20 books, 153.7~ms with 1,000 books for the same book). The larger page
+cache gives a modest gain (4--19\%).
+
+Batching is the effective optimisation: writing the 20 golden books as new books in one transaction
+costs $18.1 \pm 0.2$~ms per book against $27.2 \pm 0.5$~ms with one transaction per book ($-34$\%), and the full Indexing path in one process re-indexes about 11 books/s in batches
+against 4.7 books/s with one transaction per book (2.4$\times$). Threads give no gain: 1 to 8
+threads stay within the error margins, because the SQLite writer admits one transaction at a time
+and the write is most of the work, so the parallel part is small. These component results predict
+the integration results: I1 shows the same batching gain and I2 the same flat behaviour of consumer
+sessions. The JMH throughput benchmark re-indexes books that are already in the datamart, so its
+11 books/s compares with the X0 re-index through the broker (10.0 books/s,
+Section~\ref{sec:interference}): the message-driven path adds little to the cost of the work
+itself.
+
+A single Search query costs 3--5~ms on one thread. These workloads differ in terms and
+selectivity, so they do not isolate the cost of one filter; the filtered query is probably cheaper
+because the filters reduce the candidate books to rank. Under concurrent HTTP load (Section~\ref{sec:s1})
+the mean latency is lower, mainly because the integration query set contains many low-frequency terms.
+
+\subsection{Integration Benchmark: Dataset, Method, and Measures}
+\label{sec:integration-method}
 
 The integration benchmark uses the delivered Stage~2 code and a tier-1000 workspace. Every
 configuration is repeated three times and reported as mean $\pm$ standard deviation unless stated
@@ -628,6 +692,7 @@ reported, a pipeline book is skipped as already ingested, or a message reaches t
         \textbf{Item} & \textbf{Value} \\
         \midrule
         Host & Intel Core i7-1255U laptop, 12 logical CPUs visible to WSL, Windows + WSL~2 Ubuntu, 10~GiB WSL RAM. \\
+        Storage & WSL~2 ext4 virtual disk (1~TB) on the laptop's internal drive; datalake, datamart and broker store all on this disk. \\
         Runtime & OpenJDK 21.0.12, code compiled for Java~17; nginx 1.28.3; 64--512~MiB JVM heap. \\
         Code & Benchmark commit \texttt{19e2b1b}, 4 November 2026. \\
         Data & 1,000 Gutenberg books; 1,000-book datamart with 366,187 distinct terms. \\
@@ -645,6 +710,7 @@ increase end-to-end throughput, and how much Search and Indexing interfere when 
 machine.
 
 \subsection{Search Concurrency}
+\label{sec:s1}
 
 \begin{table}[H]
     \centering
@@ -675,7 +741,7 @@ machine.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.78\textwidth]{s1-latency.png}
-    \caption{Search p95 latency as client concurrency increases.}
+    \caption{Search mean and p95 latency as client concurrency increases.}
     \label{fig:s1-latency}
 \end{figure}
 
@@ -723,15 +789,15 @@ failure tests show that -- but it is not a speedup mechanism on this machine.
     \caption{I1--I3: Indexing throughput at saturation.}
     \label{tab:indexing-saturation}
     \small
-    \begin{tabularx}{\textwidth}{p{0.22\textwidth} p{0.31\textwidth} X}
+    \begin{tabular}{l r r r r}
         \toprule
-        \textbf{Experiment} & \textbf{Configurations} & \textbf{Throughput (books/s)} \\
+        \textbf{Experiment} & \multicolumn{4}{c}{\textbf{Throughput (books/s) per configuration}} \\
         \midrule
-        I1 batch size & 1 / 5 / 20 / 50 & $6.08 \pm 0.28$ / $11.23 \pm 0.29$ / $18.37 \pm 0.27$ / $22.30 \pm 0.11$ \\
-        I2 consumer sessions & 1 / 2 / 4 & $17.69 \pm 1.00$ / $18.39 \pm 0.53$ / $16.19 \pm 1.61$ \\
-        I3 replicas & 1 / 2 / 3 & $17.92 \pm 0.68$ / $14.51 \pm 3.19$ / $10.10 \pm 1.55$ \\
+        I1 batch size & 1: $6.08 \pm 0.28$ & 5: $11.23 \pm 0.29$ & 20: $18.37 \pm 0.27$ & 50: $22.30 \pm 0.11$ \\
+        I2 consumer sessions & 1: $17.69 \pm 1.00$ & 2: $18.39 \pm 0.53$ & 4: $16.19 \pm 1.61$ & \\
+        I3 replicas & 1: $17.92 \pm 0.68$ & 2: $14.51 \pm 3.19$ & 3: $10.10 \pm 1.55$ & \\
         \bottomrule
-    \end{tabularx}
+    \end{tabular}
 \end{table}
 
 \begin{figure}[H]
@@ -831,6 +897,7 @@ seconds. The additional Ingestion JVMs also take CPU from Indexing, so end-to-en
 slightly as more Ingestion replicas are added.
 
 \subsection{Search and Indexing Interference}
+\label{sec:interference}
 
 \begin{table}[H]
     \centering
@@ -876,7 +943,8 @@ that pays most of the cost of sharing the machine.
 \subsection{Coordination Cost and Resource Use}
 
 Below saturation, broker queue time is small compared with the work itself. In I4 a message waits
-about 2--27~ms in the broker while one book needs roughly 350~ms of processing latency. In the full
+about 2--27~ms in the broker, while one book needs roughly 350~ms from publication to commit
+(median, including the 200~ms batch wait). In the full
 pipeline, \texttt{ingest.requests} waits about 1--2~ms. When the system is saturated, large queue
 times are a symptom of the downstream bottleneck rather than an expensive broker operation.
 
@@ -970,8 +1038,9 @@ allow work to be repeated safely. Functional tests show that the full pipeline c
 Indexing replica is killed, and the final combined API/event validation passes all 32 checks.
 
 The performance results identify one clear limit. \textbf{Indexing is the bottleneck of the current
-pipeline, and the bottleneck inside Indexing is the single SQLite writer.} Batching improves
-throughput from about 6 to 22 books/s, but more Indexing replicas reduce it. Ingestion can prepare
+pipeline, and the bottleneck inside Indexing is the single SQLite writer.} The JMH microbenchmarks show why: writing to SQLite is
+78--94\% of the cost of one book, and threads inside one process do not change throughput. Batching
+improves throughput from about 6 to 22 books/s, but more Indexing replicas reduce it. Ingestion can prepare
 books faster than Indexing can publish them, so extra Ingestion replicas only build a longer queue.
 Search reaches several thousand queries per second, but on one host additional Search replicas do
 not create new compute capacity and therefore do not improve throughput.
