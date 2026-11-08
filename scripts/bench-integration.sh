@@ -2,7 +2,7 @@
 # Integration benchmarks (#8, docs/INTEGRATION_BENCHMARK.md section 3), run one after the other
 # with the deployment scripts of #7 and the measurement client (bench-client).
 #
-#   bash scripts/bench-integration.sh                 # every experiment: S1 S2 I1 I2 I3 I4 P1 X1
+#   bash scripts/bench-integration.sh                 # every experiment: S1 S2 I1 I2 I3 I4 P1 X1 X0
 #   bash scripts/bench-integration.sh S1 I1           # only some of them
 #   RUNS=1 DURATION=20 bash scripts/bench-integration.sh S1   # quick trial (not for the report)
 #
@@ -40,7 +40,7 @@ X1_DURATION="${X1_DURATION:-30}"     # must fit inside the re-index (~1 min for 
 TIMEOUT="${TIMEOUT:-1800}"
 DRY_RUN="${DRY_RUN:-0}"
 EXPERIMENTS=("$@")
-[ ${#EXPERIMENTS[@]} -gt 0 ] || EXPERIMENTS=(S1 S2 I1 I2 I3 I4 P1 X1)
+[ ${#EXPERIMENTS[@]} -gt 0 ] || EXPERIMENTS=(S1 S2 I1 I2 I3 I4 P1 X1 X0)
 
 CLIENT="$ROOT/bench-client/target/bench-client.jar"
 IDS="$ROOT/bench/ids-tier1000.txt"
@@ -361,10 +361,14 @@ if d < float(sys.argv[2]): print(f"  CHECK FAILED: the re-index lasted {d} s, le
     done
 }
 
+X0() {   # control for X1: the same re-index of the 1000 books into the FULL datamart, no search load
+    one_run "X0/reindex" "X0-reindex-idle" full restore measure_index_only
+}
+
 # --- main ---------------------------------------------------------------------------------------
 
 for e in "${EXPERIMENTS[@]}"; do
-    case "$e" in S1|S2|I1|I2|I3|I4|P1|X1) ;; *) echo "unknown experiment '$e' (S1 S2 I1 I2 I3 I4 P1 X1)"; exit 2 ;; esac
+    case "$e" in S1|S2|I1|I2|I3|I4|P1|X1|X0) ;; *) echo "unknown experiment '$e' (S1 S2 I1 I2 I3 I4 P1 X1 X0)"; exit 2 ;; esac
 done
 for tool in java nginx curl python3; do
     command -v "$tool" > /dev/null || { echo "missing '$tool' (e.g. sudo apt install -y nginx)"; exit 1; }
@@ -391,7 +395,7 @@ mkdir -p "$OUT" "$BENCH_WORK"
 log "Results in $OUT (host description in host.txt)"
 
 link_datalake
-case " ${EXPERIMENTS[*]} " in *" S1 "*|*" S2 "*|*" X1 "*) prepare_datamart ;; esac
+case " ${EXPERIMENTS[*]} " in *" S1 "*|*" S2 "*|*" X1 "*|*" X0 "*) prepare_datamart ;; esac
 for e in "${EXPERIMENTS[@]}"; do
     log "=== $e"
     "$e"

@@ -130,18 +130,23 @@ Ingestion alone scales a little with replicas (+27 % with 4), but the books beco
 `books.downloaded` queue (average time in queue 10.1 → 16.6 s) and the extra ingestion processes
 take some CPU from indexing. Adding ingestion replicas is useless until indexing is faster.
 
-## 5. Interference — X1 search during a re-index (16 clients, 1 replica each)
+## 5. Interference — X1 search during a re-index (16 clients, 1 replica each), X0 control
 
 | | Search q/s | Search p95 ms | Search p99 ms | Indexing books/s |
 |---|---|---|---|---|
 | Idle | 6555 ± 417 | 4.96 ± 0.35 | 7.38 ± 0.65 | – |
+| Re-index only (X0, no search load) | – | – | – | 10.01 ± 1.20 |
 | During re-index | 4696 ± 247 | 8.23 ± 0.47 | 15.16 ± 1.09 | 9.08 ± 0.17 |
 
 ![X1 throughput](img/integration/x1-throughput.png)
 ![X1 p95](img/integration/x1-p95.png)
 
-Indexing costs Search −28 % throughput, +66 % p95 and 2× p99; Search under load halves indexing
-throughput (9.1 against 18.4 books/s in I1). During the run Search uses ~5.5 CPUs and indexing
+Indexing costs Search −28 % throughput, +66 % p95 and 2× p99. The effect on indexing is small:
+the same re-index without search load (X0) runs at 10.0 ± 1.2 books/s, against 9.1 ± 0.2 under
+search load (−9 %, within the run-to-run variation of X0). I1 (18.4 books/s) is **not** the right
+baseline: it inserts new books into an empty datamart, while a re-index first deletes the existing
+rows of every book and is slower. X0 was run on 8 Nov 2026 (`results/integration/20261108-1747`),
+same host and same service code as the other runs; only the runner changed. During the run Search uses ~5.5 CPUs and indexing
 ~3.3 (p90): together they fill the host. SQLite in WAL mode lets readers and the writer work at the
 same time, so the main cause is **CPU contention**; WAL growth while readers are active may add to
 it (not measured separately).
@@ -178,7 +183,8 @@ inside the host figures.
 2. **On one machine, replication does not scale** any service measured here: Search is limited by
    the CPU (replicas share it), indexing by the database file. Replicas give fault tolerance (the
    #7 failover test) but not speed on one host.
-3. **Search and indexing interfere** through the shared CPU (−28 % Search, −51 % indexing).
+3. **Search and indexing interfere** through the shared CPU: Search pays most of it (−28 % q/s,
+   +66 % p95); indexing slows only ~9 % (X0 control, within the noise).
 4. **What Stage 3 must change:** replicas on separate machines (Search scales only with more CPUs);
    an index that accepts parallel writers — partitioned by term or by book, or a database server —
    instead of one SQLite file; datalake and datamart reachable over the network instead of local
