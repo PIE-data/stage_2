@@ -153,8 +153,8 @@ it (not measured separately).
 
 ## 6. Coordination cost
 
-- Below saturation (I4) a message waits **2–27 ms** in the broker, against ~350 ms of work per
-  book: the broker adds little. `ingest.requests` waits 1–2 ms in P1.
+- Below saturation (I4) a message waits **2–27 ms** in the broker, against ~350 ms per book from
+  publication to commit (median, including the 200 ms batch wait): the broker adds little. `ingest.requests` waits 1–2 ms in P1.
 - At saturation every second of extra latency is queue time in front of indexing: the queue is
   where the backlog becomes visible, not a cost of the broker itself.
 - Broker CPU: ~0.4–0.5 CPU (p90) at ~18 messages/s in and out; memory ~160 MiB.
